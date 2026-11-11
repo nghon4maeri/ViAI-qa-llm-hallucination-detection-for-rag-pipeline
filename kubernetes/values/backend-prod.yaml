@@ -29,6 +29,9 @@ env:
   ENVIRONMENT: production
   LOG_LEVEL: info
 
+  # Database connection for ViAI-QA Audits & Projects
+  DATABASE_URL: "postgresql://user:password@postgres.hallucination-prod.svc.cluster.local:5432/viai_qa"
+
   # MLflow — loaded from secret
   MLFLOW_MODEL_NAME: vihallu-detector
   MLFLOW_MODEL_ALIAS: production

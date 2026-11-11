@@ -1,6 +1,6 @@
 <script>
     import '../app.css';
-</script>clear
+</script>
 
 
 <div class="relative min-h-screen overflow-x-hidden">

@@ -1,0 +1,51 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.venv_mlflow/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Frontend dependencies and dev artifacts
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/build/
+.npm/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Documentation & IDE
+docs/
+.vscode/
+.idea/
+
+# Large local caches
+.cache/
+~/.cache/
+data/

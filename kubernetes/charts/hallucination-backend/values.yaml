@@ -38,6 +38,7 @@ envFromSecrets:
 
 secrets:
   create: false  
+  databaseUrl: ""
   mlflowTrackingUri: ""
   mlflowS3EndpointUrl: ""
   awsAccessKeyId: ""

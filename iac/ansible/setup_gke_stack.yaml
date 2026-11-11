@@ -111,7 +111,7 @@
         --set persistence.size=2Gi
         --wait --timeout 180s
     - name: Add MLflow Helm repo
-  command: helm repo add mlflow-community https://community-helm-charts.github.io/mlflow
+      command: helm repo add mlflow-community https://community-helm-charts.github.io/mlflow
 
     - name: Create MLflow values file
       copy:

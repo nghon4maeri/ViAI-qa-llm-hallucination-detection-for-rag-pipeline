@@ -22,3 +22,9 @@ opentelemetry-semantic-conventions>=0.47b0
 opentelemetry-instrumentation-fastapi>=0.47b0
 opentelemetry-exporter-otlp>=1.26.0
 prometheus-fastapi-instrumentator==7.0.0
+
+# Database & Migrations (Sprint 1)
+sqlalchemy>=2.0.25
+alembic>=1.13.1
+psycopg2-binary>=2.9.9
+pydantic-settings>=2.1.0

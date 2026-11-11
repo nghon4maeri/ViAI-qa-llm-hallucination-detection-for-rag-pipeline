@@ -27,10 +27,14 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements-serving.txt
 
 COPY backend backend
-RUN mkdir -p /app/models
+COPY alembic.ini alembic.ini
+RUN mkdir -p /app/models /app/predictions
 
 COPY models models
 
 EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
 
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080"]
