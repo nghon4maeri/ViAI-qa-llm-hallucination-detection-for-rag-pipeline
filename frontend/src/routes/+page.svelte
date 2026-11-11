@@ -20,7 +20,7 @@
         ChevronLeft, 
         ChevronRight, 
         CheckCircle2, 
-        MessageSquareCheck,
+        MessageSquare,
         Loader2,
         Sparkles,
         Layers,
@@ -218,7 +218,7 @@
                                 <div class="flex items-center gap-1">
                                     {#if item.has_feedback}
                                         <span title="Đã có đánh giá Human Annotation" class="text-indigo-400">
-                                            <MessageSquareCheck size={12} />
+                                            <MessageSquare size={12} />
                                         </span>
                                     {/if}
                                     <span class="text-[9px] font-black px-1.5 py-0.5 rounded border {badge.css}">
