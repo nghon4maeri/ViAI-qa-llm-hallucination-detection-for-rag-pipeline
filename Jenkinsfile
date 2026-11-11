@@ -18,6 +18,7 @@ pipeline {
 
         KSERVE_ISVC    = 'hallucination-detector'
         KSERVE_MANIFEST = './mlops/kserve/inference-service.yaml'
+        GCS_BUCKET     = 'vihallu-models'
         GCS_MODEL_URI  = 'gs://vihallu-models/hallucination-detector/model'
         INGRESS_IP     = '136.110.57.217'
 
@@ -74,7 +75,7 @@ pipeline {
                         -t hallucination-ci:${GIT_SHA_SHORT} .
 
                     CONTAINER_ID=$(docker create hallucination-ci:${GIT_SHA_SHORT} \
-                        pytest tests/unit \
+                        pytest tests/unit tests/integration \
                             --cov=backend \
                             --cov-report=xml:/tmp/coverage.xml \
                             --cov-fail-under=${COVERAGE_THRESHOLD})
@@ -197,36 +198,6 @@ pipeline {
                             -t ${FULL_IMAGE}:latest \
                             --build-arg GIT_SHA=${GIT_SHA_SHORT} \
                             .
-
-                        docker push ${FULL_IMAGE}:${GIT_SHA_SHORT}
-                        docker push ${FULL_IMAGE}:latest
-
-                        echo "[OK] Pushed ${FULL_IMAGE}:${GIT_SHA_SHORT}"
-                    '''
-                }
-            }
-        }
-
-        stage('Build & Push Image') {
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: GHCR_ID,
-                        usernameVariable: 'GHCR_USERNAME',
-                        passwordVariable: 'GHCR_TOKEN'
-                    )
-                ]) {
-                    sh '''
-                        echo "${GHCR_TOKEN}" | docker login ghcr.io \
-                            -u "${GHCR_USERNAME}" --password-stdin
-
-                        docker build \
-                            -f docker/Dockerfile.backend \
-                            -t ${FULL_IMAGE}:${GIT_SHA_SHORT} \
-                            -t ${FULL_IMAGE}:latest \
-                            --build-arg GIT_SHA=${GIT_SHA_SHORT} \
-                            .
-                            # Note: No models copied (loading from GCS at runtime)
 
                         docker push ${FULL_IMAGE}:${GIT_SHA_SHORT}
                         docker push ${FULL_IMAGE}:latest

@@ -30,12 +30,12 @@ jobs:
             -f docker/Dockerfile.ci \
             -t hallucination-ci:${{ github.sha }} .
 
-      - name: Run unit tests with coverage
+      - name: Run unit & integration tests with coverage
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             hallucination-ci:${{ github.sha }} \
-            pytest tests/unit \
+            pytest tests/unit tests/integration \
               --cov=backend \
               --cov-report=xml:/workspace/coverage.xml \
               --cov-report=term-missing \
@@ -100,7 +100,7 @@ jobs:
 
       - name: Cache MLflow Model
         id: model-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: backend/model_store/
           key: mlflow-model-production-${{ hashFiles('scripts/pull_model_from_registry.py') }}

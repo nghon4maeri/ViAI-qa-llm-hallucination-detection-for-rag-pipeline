@@ -291,45 +291,47 @@ class HallucinationPipeline:
         original_label = self.labels.get(int(class_id), "Unknown")
         print(f"- [LightGBM Opinion] Label: {original_label} ({confidence:.4f})")
 
+        active_guardrail = None
+
         if p_contra > 0.5:
             print("GUARDRAIL: NLI Contradiction cao -> Force Intrinsic")
-            return {
-                "label": self._normalize_label("Intrinsic Hallucination"),
-                "confidence": float(p_contra)
-            }
-
-        if p_neutral > 0.45 and p_entail < 0.5:
+            final_label = self._normalize_label("Intrinsic Hallucination")
+            final_conf = float(p_contra)
+            active_guardrail = "NLI_CONTRADICTION_HIGH"
+        elif p_neutral > 0.45 and p_entail < 0.5:
             print("GUARDRAIL: NLI Neutral cao (Thong tin ngoai le) -> Force Extrinsic")
-            return {
-                "label": self._normalize_label("Extrinsic Hallucination"),
-                "confidence": float(p_neutral)
-            }
-
-        if new_entity_count >= 1 and class_id == 1:
-            if p_entail < 0.9:
-                print("GUARDRAIL: Có thuc the la va Entailment khong tuyet doi -> Force Extrinsic")
-                return {
-                    "label": "extrinsic",
-                    "confidence": 0.85
-                }
-
-        if f_vistral[0][0] > 0.6:
-             print("GUARDRAIL: Vistral vote Extrinsic rat cao -> Force Extrinsic")
-             return {
-                "label": "extrinsic",
-                "confidence": float(f_vistral[0][0])
-            }
-
-        if p_contra > 0.35 and class_id == 1:
-             print("Soft Warning: Co tin hieu mau thuan nhe. Tra ve Intrinsic.")
-             return {
-                "label": "intrinsic",
-                "confidence": float(p_contra)
-            }
+            final_label = self._normalize_label("Extrinsic Hallucination")
+            final_conf = float(p_neutral)
+            active_guardrail = "NLI_NEUTRAL_HIGH"
+        elif new_entity_count >= 1 and class_id == 1 and p_entail < 0.9:
+            print("GUARDRAIL: Có thuc the la va Entailment khong tuyet doi -> Force Extrinsic")
+            final_label = "extrinsic"
+            final_conf = 0.85
+            active_guardrail = "NEW_ENTITY_MISMATCH"
+        elif f_vistral[0][0] > 0.6:
+            print("GUARDRAIL: Vistral vote Extrinsic rat cao -> Force Extrinsic")
+            final_label = "extrinsic"
+            final_conf = float(f_vistral[0][0])
+            active_guardrail = "VISTRAL_EXTRINSIC_HIGH"
+        elif p_contra > 0.35 and class_id == 1:
+            print("Soft Warning: Co tin hieu mau thuan nhe. Tra ve Intrinsic.")
+            final_label = "intrinsic"
+            final_conf = float(p_contra)
+            active_guardrail = "SOFT_CONTRADICTION"
+        else:
+            final_label = self._normalize_label(original_label)
+            final_conf = float(confidence)
 
         return {
-            "label": self._normalize_label(original_label),
-            "confidence": float(confidence)
+            "label": final_label,
+            "confidence": final_conf,
+            "p_entailment": float(p_entail),
+            "p_neutral": float(p_neutral),
+            "p_contradiction": float(p_contra),
+            "new_entity_count": int(new_entity_count),
+            "entity_overlap_ratio": float(overlap_ratio),
+            "vistral_extrinsic_prob": float(f_vistral[0][0]),
+            "active_guardrail": active_guardrail
         }
     
 _pipeline_instance = None

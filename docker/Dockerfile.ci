@@ -16,11 +16,12 @@ RUN pip install --no-cache-dir -r requirements-ci.txt
 
 COPY backend backend
 COPY tests tests
+COPY alembic.ini alembic.ini
 COPY .coveragerc .
 
 RUN mkdir -p /workspace && chmod 777 /workspace
 
-CMD ["pytest", "tests/unit", \
+CMD ["pytest", "tests/unit", "tests/integration", \
      "--cov=backend", \
      "--cov-config=.coveragerc", \
      "--cov-report=xml:/workspace/coverage.xml", \
