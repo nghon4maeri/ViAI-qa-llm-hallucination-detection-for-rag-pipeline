@@ -1,6 +1,6 @@
 # ViAI-QA Improvement Roadmap: RAG Evaluation & Guardrail Platform
 
-**Status:** Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Medical dataset built; the baseline is blocked on downloading the Qwen weights (see [MEDICAL_DOMAIN.md](MEDICAL_DOMAIN.md)).
+**Status:** Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Medical dataset built; the baseline is blocked on downloading the Qwen weights (see [MEDICAL_DOMAIN.md](MEDICAL_DOMAIN.md)). Phase 5 first pass done.
 
 ## Domain focus
 
@@ -97,7 +97,21 @@ Original plan:
 - Synthetic data agent: correct QA plus controlled intrinsic/extrinsic corruptions from Vietnamese documents → DVC dataset.
 - Merge with `audit_feedback` → `train` stage → `auto_promote_registry.py`.
 
-### Phase 5: UI/UX redesign
+### Phase 5: UI/UX redesign ✅ (first pass)
+
+**Done (2026-11-25):**
+- **RAG trace view** (`TraceView.svelte`), the new default tab. The answer is shown as a reviewed passage: each sentence is highlighted by verdict (green = backed by a source, red solid underline = contradicts, amber dashed underline = not in the sources) and footnoted `[n]` to the chunk behind the verdict. Next to it, the retrieved chunks show "backs n sentences" or "not used", plus relevance. Clicking a sentence shows its NLI/NER/guardrail breakdown. Header figures: faithfulness, chunks used, ground-truth coverage, question relevance (an uncalibrated cosine, labelled as such).
+- **Restyled existing screens** without changing features: history, single check, batch (now accepts `.jsonl` and shows faithfulness), feedback.
+- **Design direction** (unslop + ui-ux-pro-max skills): a pharmacist's desk, i.e. warm paper, ink and a reviewer's highlighter. Light theme with a system dark mode, one accent (`#0e5f6b` pharmacy ink), Be Vietnam Pro + IBM Plex Mono (both cover Vietnamese; the suggested Fira Code does not). Tokens live in `frontend/src/app.css`.
+- **Bugs fixed along the way:**
+  - The breakdown always showed 0%: the frontend read `nli_*` / `ner_*` fields that the backend never sends.
+  - The "grounded" history filter sent `no_hallucination` instead of `no`, so it was always empty.
+  - A runtime dependency on an external noise image (`grainy-gradients.vercel.app`).
+  - A static "Online" badge that showed nothing real.
+- Feedback now stores corrected labels in the model's own vocabulary (`no`/`intrinsic`/`extrinsic`). Older rows use `no_hallucination`.
+- Checks: `svelte-check` 0 errors, `vite build` OK, `src/lib/labels.spec.ts` passes. `src/routes/page.svelte.spec.ts` was already failing before this work (browser-mode test under the jsdom config).
+
+**Original plan:**
 - Keep SvelteKit. Use `unslop` and `ui-ux-pro-max` as design skills; port `animate-ui` patterns with `svelte/motion` or `motion`.
 - New views: RAG trace view (sentence highlights linked to evidence chunks), agent timeline, eval-run dashboard. Existing views are restyled.
 

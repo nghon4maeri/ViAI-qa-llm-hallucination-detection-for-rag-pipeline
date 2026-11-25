@@ -1,7 +1,6 @@
 <!-- frontend/src/lib/components/Header.svelte -->
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { Bot, Sparkles, FolderGit2, CheckCircle2 } from 'lucide-svelte';
     import { fetchProjects, type Project } from '$lib/api/api';
     import { createEventDispatcher } from 'svelte';
 
@@ -30,46 +29,26 @@
     }
 </script>
 
-<header class="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-slate-950/40 backdrop-blur-md relative z-30">
-    <!-- Brand -->
-    <div class="flex items-center gap-3">
-        <div class="relative p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-            <Bot size={24} class="text-indigo-400" />
-            <Sparkles size={10} class="absolute -top-0.5 -right-0.5 text-pink-400 animate-pulse" />
-        </div>
-        <div>
-            <div class="flex items-center gap-2">
-                <h1 class="text-base font-bold tracking-tight text-white">
-                    ViAI-<span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400">QA</span>
-                </h1>
-                <span class="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                    <CheckCircle2 size={10} /> Online
-                </span>
-            </div>
-            <p class="text-[10px] text-slate-400">Vietnamese AI Response Quality Assurance Workspace</p>
-        </div>
+<header class="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-line bg-card px-4 sm:px-6">
+    <div class="flex items-baseline gap-3">
+        <h1 class="whitespace-nowrap text-base font-semibold leading-none">ViAI-QA</h1>
+        <p class="hidden text-[13px] text-ink-2 sm:block">Kiểm định câu trả lời RAG y tế</p>
     </div>
 
-    <!-- Workspace Selector -->
-    <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-slate-300">
-            <FolderGit2 size={14} class="text-indigo-400" />
-            <span class="text-slate-500">Workspace:</span>
-            {#if projects.length > 0}
-                <select 
-                    bind:value={selectedProjectId}
-                    on:change={handleSelect}
-                    class="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer pr-2"
-                >
-                    {#each projects as proj}
-                        <option value={proj.id} class="bg-slate-900 text-slate-200">
-                            {proj.name} {proj.is_default ? '(Mặc định)' : ''}
-                        </option>
-                    {/each}
-                </select>
-            {:else}
-                <span class="font-medium text-slate-300">Default Workspace</span>
-            {/if}
-        </div>
-    </div>
+    <label class="flex items-center gap-2 text-[13px]">
+        <span class="hidden text-ink-2 sm:inline">Dự án</span>
+        {#if projects.length > 0}
+            <select
+                bind:value={selectedProjectId}
+                on:change={handleSelect}
+                class="h-8 max-w-[180px] rounded-lg border border-line-strong bg-card px-2 text-[13px] focus:border-accent focus:outline-none sm:max-w-none"
+            >
+                {#each projects as proj}
+                    <option value={proj.id}>{proj.name}{proj.is_default ? ' (mặc định)' : ''}</option>
+                {/each}
+            </select>
+        {:else}
+            <span>Mặc định</span>
+        {/if}
+    </label>
 </header>

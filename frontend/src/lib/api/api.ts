@@ -7,14 +7,39 @@ export interface HalluInput {
     project_id?: string;
 }
 
+// Field names mirror backend/app/evaluation/schemas.py EvaluationBreakdown
 export interface EvaluationBreakdown {
-    nli_entailment?: number | null;
-    nli_neutral?: number | null;
-    nli_contradiction?: number | null;
-    ner_overlap_ratio?: number | null;
-    ner_new_entity_count?: number | null;
-    llm_uncertainty?: number | null;
+    p_entailment?: number | null;
+    p_neutral?: number | null;
+    p_contradiction?: number | null;
+    new_entity_count?: number | null;
+    new_entities?: string[] | null;
+    entity_overlap_ratio?: number | null;
+    vistral_extrinsic_prob?: number | null;
     active_guardrail?: string | null;
+}
+
+export interface ClaimVerdict {
+    text: string;
+    label: string;
+    confidence: number;
+    context_index: number;
+    breakdown: EvaluationBreakdown;
+}
+
+export interface RagMetrics {
+    answer_relevance?: number | null;
+    context_relevance?: number[] | null;
+    context_utilization: number;
+    context_recall?: number | null;
+}
+
+export interface RagInput {
+    question: string;
+    contexts: string[];
+    answer: string;
+    ground_truth?: string;
+    project_id?: string;
 }
 
 export interface FeedbackInput {
@@ -49,6 +74,11 @@ export interface AuditResponse {
     label: string;
     confidence: number;
     breakdown?: EvaluationBreakdown | null;
+    contexts?: string[] | null;
+    claims?: ClaimVerdict[] | null;
+    faithfulness?: number | null;
+    ground_truth?: string | null;
+    rag_metrics?: RagMetrics | null;
     context: string;
     prompt: string;
     response: string;
@@ -77,6 +107,7 @@ export interface AuditSummary {
     response: string;
     label: string;
     confidence: number;
+    faithfulness?: number | null;
     status: string;
     has_feedback: boolean;
     created_at: string;
@@ -105,6 +136,7 @@ export interface BatchItemResult {
     response: string;
     label?: string | null;
     confidence?: number | null;
+    faithfulness?: number | null;
     status: string;
     latency_ms?: number | null;
     created_at: string;
@@ -120,6 +152,7 @@ export interface BatchDetailResponse {
     failed_count: number;
     hallucination_count: number;
     hallucination_rate: number;
+    mean_faithfulness?: number | null;
     items: BatchItemResult[];
     created_at: string;
     completed_at?: string | null;
@@ -152,6 +185,29 @@ export const submitAudit = async (
     if (!res.ok) {
         const errorBody = await res.json().catch(() => ({}));
         throw new Error(errorBody.detail || `Lỗi hệ thống (${res.status})`);
+    }
+    return await res.json();
+};
+
+export const submitRagAudit = async (
+    data: RagInput
+): Promise<AuditResponse> => {
+    const res = await fetch(`${AUDITS_URL}/rag`, {
+        method: "POST",
+        headers: DEFAULT_HEADERS,
+        body: JSON.stringify({
+            question: data.question,
+            contexts: data.contexts,
+            answer: data.answer,
+            ground_truth: data.ground_truth || undefined,
+            project_id: data.project_id || undefined,
+        }),
+    });
+
+    if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        const detail = Array.isArray(errorBody.detail) ? errorBody.detail[0]?.msg : errorBody.detail;
+        throw new Error(detail || `Lỗi hệ thống (${res.status})`);
     }
     return await res.json();
 };

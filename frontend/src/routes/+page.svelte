@@ -4,36 +4,41 @@
     import Header from '$lib/components/Header.svelte';
     import HalluForm from '$lib/components/HalluForm.svelte';
     import HalluResult from '$lib/components/HalluResult.svelte';
+    import RagForm from '$lib/components/RagForm.svelte';
+    import TraceView from '$lib/components/TraceView.svelte';
     import BatchEvaluation from '$lib/components/BatchEvaluation.svelte';
-    import { 
-        submitAudit, 
-        fetchAuditHistory, 
-        fetchAuditDetail, 
-        type AuditSummary, 
-        type AuditResponse 
+    import VerdictTag from '$lib/components/VerdictTag.svelte';
+    import {
+        submitAudit,
+        submitRagAudit,
+        fetchAuditHistory,
+        fetchAuditDetail,
+        type AuditSummary,
+        type RagInput
     } from '$lib/api/api';
     import { currentResult } from '$lib/stores/stores';
-    import { 
-        History, 
-        Clock, 
-        Filter, 
-        ChevronLeft, 
-        ChevronRight, 
-        CheckCircle2, 
-        MessageSquare,
-        Loader2,
-        Sparkles,
-        Layers,
-        FileSpreadsheet,
-        Search
-    } from 'lucide-svelte';
-    import { slide } from 'svelte/transition';
+    import { formatTime, pct } from '$lib/labels';
+    import { ChevronLeft, ChevronRight, MessageSquare, Loader2, Search } from 'lucide-svelte';
 
-    let activeTab: 'single' | 'batch' = 'single';
+    type Tab = 'rag' | 'single' | 'batch';
+    const TABS: { id: Tab; text: string }[] = [
+        { id: 'rag', text: 'Kiểm tra RAG' },
+        { id: 'single', text: 'Kiểm tra đơn' },
+        { id: 'batch', text: 'Bộ dữ liệu' },
+    ];
+    const FILTERS = [
+        { id: 'all', text: 'Tất cả' },
+        { id: 'no', text: 'Khớp' },
+        { id: 'intrinsic', text: 'Mâu thuẫn' },
+        { id: 'extrinsic', text: 'Ngoài nguồn' },
+    ];
+
+    let activeTab: Tab = 'rag';
     let isLoading = false;
     let isHistoryLoading = false;
     let error: string | null = null;
     let formContext = '', formPrompt = '', formResponse = '';
+    let ragQuestion = '', ragContexts: string[] = [''], ragAnswer = '', ragGroundTruth = '';
 
     let selectedProjectId: string = '';
     let selectedFilter: string = 'all';
@@ -50,6 +55,7 @@
         return (item.prompt && item.prompt.toLowerCase().includes(q)) ||
                (item.response && item.response.toLowerCase().includes(q));
     });
+    $: isRagResult = !!$currentResult?.claims?.length;
 
     async function loadHistory(page = 1) {
         isHistoryLoading = true;
@@ -80,37 +86,46 @@
         loadHistory(1);
     }
 
-    async function handleAnalysis(event: CustomEvent) {
-        isLoading = true; 
-        error = null; 
+    async function run(task: () => Promise<any>) {
+        isLoading = true;
+        error = null;
         currentResult.set(null);
         try {
-            const res = await submitAudit({
-                context: event.detail.context,
-                prompt: event.detail.prompt,
-                response: event.detail.response,
-                project_id: selectedProjectId || undefined,
-            });
-            currentResult.set(res);
+            currentResult.set(await task());
             await loadHistory(1);
         } catch (e: any) {
-            error = "Lỗi kết nối Server: " + e.message;
+            error = 'Không kết nối được máy chủ: ' + e.message;
         } finally {
             isLoading = false;
         }
     }
 
+    const handleAnalysis = (event: CustomEvent) =>
+        run(() => submitAudit({ ...event.detail, project_id: selectedProjectId || undefined }));
+
+    const handleRag = (event: CustomEvent<RagInput>) =>
+        run(() => submitRagAudit({ ...event.detail, project_id: selectedProjectId || undefined }));
+
     async function selectHistoryItem(item: AuditSummary) {
         try {
             isLoading = true;
             const detail = await fetchAuditDetail(item.id);
-            formContext = detail.context;
-            formPrompt = detail.prompt;
-            formResponse = detail.response;
+            if (detail.contexts?.length) {
+                activeTab = 'rag';
+                ragQuestion = detail.prompt;
+                ragContexts = [...detail.contexts];
+                ragAnswer = detail.response;
+                ragGroundTruth = detail.ground_truth ?? '';
+            } else {
+                activeTab = 'single';
+                formContext = detail.context;
+                formPrompt = detail.prompt;
+                formResponse = detail.response;
+            }
             currentResult.set(detail);
             error = null;
         } catch (e: any) {
-            error = "Không thể tải chi tiết: " + e.message;
+            error = 'Không tải được chi tiết: ' + e.message;
         } finally {
             isLoading = false;
         }
@@ -120,203 +135,155 @@
         currentResult.set(null);
     }
 
-    const getHistoryBadge = (label?: string) => {
-        const l = label?.toLowerCase() || '';
-        if (l.includes('no') || l.includes('entail')) 
-            return { text: 'CHÍNH XÁC', css: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' };
-        if (l.includes('intrinsic') || l.includes('contra')) 
-            return { text: 'MÂU THUẪN', css: 'text-rose-400 border-rose-500/30 bg-rose-500/10' };
-        if (l.includes('extrinsic'))
-            return { text: 'BỊA ĐẶT', css: 'text-amber-400 border-amber-500/30 bg-amber-500/10' };
-        return { text: 'ĐANG XỬ LÝ', css: 'text-slate-400 border-slate-500/30 bg-slate-500/10' };
-    };
+    function switchTab(tab: Tab) {
+        activeTab = tab;
+        // A result belongs to the tab that produced it
+        if ((tab === 'rag') !== isRagResult) currentResult.set(null);
+    }
 </script>
 
-<div class="fixed inset-0 bg-[#030712] text-slate-200 font-sans selection:bg-indigo-500/30">
-    <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
-    <div class="absolute top-0 left-0 w-full h-[500px] bg-indigo-900/10 blur-[120px] rounded-full pointer-events-none"></div>
-</div>
-
-<div class="relative z-10 h-screen flex flex-col overflow-hidden">
-    <!-- Header with Workspace Selector -->
+<div class="flex h-screen flex-col">
     <Header bind:selectedProjectId on:projectChange={handleProjectChange} />
 
-    <div class="flex-1 flex overflow-hidden max-w-[1600px] mx-auto w-full px-4 gap-6 py-4">
-        
-        <!-- Persistent Audit History Sidebar (Connected to PostgreSQL) -->
-        <aside class="w-88 hidden lg:flex flex-col bg-slate-900/30 border border-white/5 rounded-2xl backdrop-blur-md overflow-hidden shadow-2xl">
-            <!-- Sidebar Header -->
-            <div class="p-4 border-b border-white/5 space-y-3">
-                <div class="flex items-center justify-between text-indigo-400">
-                    <div class="flex items-center gap-2">
-                        <History size={18} />
-                        <span class="text-xs font-bold uppercase tracking-widest">Lịch Sử Đánh Giá</span>
-                    </div>
-                    <span class="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-slate-400 font-mono">
-                        {totalAudits} kết quả
-                    </span>
+    <div class="flex min-h-0 flex-1">
+        <!-- History -->
+        <aside class="hidden w-[280px] shrink-0 flex-col border-r border-line bg-page lg:flex">
+            <div class="space-y-3 px-4 pt-6 pb-3">
+                <div class="flex items-baseline justify-between">
+                    <h2 class="text-sm font-medium">Lịch sử</h2>
+                    <span class="font-mono text-xs text-ink-3 tabular-nums">{totalAudits}</span>
                 </div>
 
-                <!-- Filter Tabs -->
-                <div class="flex gap-1 p-0.5 bg-slate-950/60 rounded-xl border border-white/5 text-[11px]">
-                    <button 
-                        on:click={() => handleFilterChange('all')}
-                        class="flex-1 py-1 rounded-lg font-medium transition-all {selectedFilter === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}"
-                    >
-                        Tất cả
-                    </button>
-                    <button 
-                        on:click={() => handleFilterChange('no_hallucination')}
-                        class="flex-1 py-1 rounded-lg font-medium transition-all {selectedFilter === 'no_hallucination' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-emerald-300'}"
-                    >
-                        Khớp
-                    </button>
-                    <button 
-                        on:click={() => handleFilterChange('intrinsic')}
-                        class="flex-1 py-1 rounded-lg font-medium transition-all {selectedFilter === 'intrinsic' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-400 hover:text-rose-300'}"
-                    >
-                        Mâu thuẫn
-                    </button>
-                    <button 
-                        on:click={() => handleFilterChange('extrinsic')}
-                        class="flex-1 py-1 rounded-lg font-medium transition-all {selectedFilter === 'extrinsic' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-400 hover:text-amber-300'}"
-                    >
-                        Bịa đặt
-                    </button>
+                <div class="flex flex-wrap gap-1" role="tablist" aria-label="Lọc theo kết luận">
+                    {#each FILTERS as f}
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={selectedFilter === f.id}
+                            on:click={() => handleFilterChange(f.id)}
+                            class="h-7 whitespace-nowrap rounded-md px-2 text-xs transition-colors duration-150 {selectedFilter === f.id ? 'bg-raised text-ink' : 'text-ink-2 hover:text-ink'}"
+                        >{f.text}</button>
+                    {/each}
                 </div>
 
-                <!-- Search Input -->
-                <div class="relative">
-                    <Search size={13} class="absolute left-2.5 top-2.5 text-slate-500" />
-                    <input 
-                        type="text" 
+                <label class="relative block">
+                    <span class="sr-only">Tìm trong lịch sử</span>
+                    <Search size={16} strokeWidth={1.5} class="absolute top-2 left-2.5 text-ink-3" />
+                    <input
+                        type="text"
                         bind:value={searchQuery}
-                        placeholder="Tìm theo từ khóa câu hỏi..." 
-                        class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-950/70 border border-white/10 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                        placeholder="Tìm câu hỏi"
+                        class="h-8 w-full rounded-lg border border-line-strong bg-card pr-3 pl-8 text-[13px] placeholder:text-ink-3 focus:border-accent focus:outline-none"
                     />
-                </div>
+                </label>
             </div>
-            
-            <!-- List Items -->
-            <div class="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+
+            <div class="flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
                 {#if isHistoryLoading}
-                    <div class="flex items-center justify-center h-32 text-slate-500 gap-2 text-xs">
-                        <Loader2 size={16} class="animate-spin text-indigo-400" />
-                        Đang đồng bộ dữ liệu...
+                    <div class="flex items-center gap-2 px-2 py-6 text-[13px] text-ink-3">
+                        <Loader2 size={16} strokeWidth={1.5} class="animate-spin" /> Đang tải
                     </div>
                 {:else}
                     {#each filteredAuditList as item (item.id)}
-                        {@const badge = getHistoryBadge(item.label)}
-                        <button 
+                        <button
+                            type="button"
                             on:click={() => selectHistoryItem(item)}
-                            class="w-full text-left p-3 rounded-xl border border-transparent bg-white/[0.02] hover:bg-white/5 hover:border-white/10 transition-all group relative overflow-hidden"
+                            class="w-full rounded-lg px-2 py-2 text-left transition-colors duration-150 hover:bg-raised {$currentResult?.id === item.id ? 'bg-raised' : ''}"
                         >
-                            <div class="flex justify-between items-center mb-1.5">
-                                <span class="text-[10px] font-mono text-slate-500">
-                                    {new Date(item.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-                                </span>
-                                <div class="flex items-center gap-1">
+                            <p class="line-clamp-2 text-[13px] leading-5">{item.prompt}</p>
+                            <div class="mt-1 flex items-center justify-between gap-2 text-xs">
+                                <VerdictTag label={item.label} />
+                                <span class="flex items-center gap-2 font-mono text-ink-3 tabular-nums">
                                     {#if item.has_feedback}
-                                        <span title="Đã có đánh giá Human Annotation" class="text-indigo-400">
-                                            <MessageSquare size={12} />
-                                        </span>
+                                        <span title="Đã có đánh giá của người duyệt"><MessageSquare size={14} strokeWidth={1.5} /></span>
                                     {/if}
-                                    <span class="text-[9px] font-black px-1.5 py-0.5 rounded border {badge.css}">
-                                        {badge.text}
-                                    </span>
-                                </div>
+                                    {#if item.faithfulness !== null && item.faithfulness !== undefined}
+                                        <span title="Độ bám nguồn">{pct(item.faithfulness)}</span>
+                                    {/if}
+                                    {formatTime(item.created_at)}
+                                </span>
                             </div>
-                            <p class="text-xs text-slate-300 font-medium line-clamp-2 group-hover:text-white transition-colors">
-                                {item.prompt}
-                            </p>
-                            
-                            <div class="absolute inset-y-0 left-0 w-1 bg-indigo-500 opacity-0 -translate-x-full group-hover:translate-x-0 group-hover:opacity-100 transition-all duration-300"></div>
                         </button>
                     {:else}
-                        <div class="flex flex-col items-center justify-center h-40 text-slate-600 opacity-60">
-                            <Clock size={24} class="mb-2" />
-                            <p class="text-xs">Chưa có kết quả kiểm tra</p>
-                        </div>
+                        <p class="px-2 py-6 text-[13px] text-ink-3">Chưa có lượt kiểm tra nào</p>
                     {/each}
                 {/if}
             </div>
 
-            <!-- Pagination Footer -->
             {#if totalPages > 1}
-                <div class="p-3 border-t border-white/5 flex items-center justify-between text-xs text-slate-400">
-                    <button 
+                <div class="flex items-center justify-between border-t border-line px-4 py-2 text-xs text-ink-2">
+                    <button
+                        type="button"
                         disabled={currentPage <= 1}
                         on:click={() => loadHistory(currentPage - 1)}
-                        class="p-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
-                    >
-                        <ChevronLeft size={16} />
-                    </button>
-                    <span class="font-mono text-[11px]">Trang {currentPage} / {totalPages}</span>
-                    <button 
+                        class="rounded-md p-1 hover:bg-raised disabled:opacity-30"
+                        aria-label="Trang trước"
+                    ><ChevronLeft size={16} strokeWidth={1.5} /></button>
+                    <span class="font-mono tabular-nums">{currentPage}/{totalPages}</span>
+                    <button
+                        type="button"
                         disabled={currentPage >= totalPages}
                         on:click={() => loadHistory(currentPage + 1)}
-                        class="p-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
-                    >
-                        <ChevronRight size={16} />
-                    </button>
+                        class="rounded-md p-1 hover:bg-raised disabled:opacity-30"
+                        aria-label="Trang sau"
+                    ><ChevronRight size={16} strokeWidth={1.5} /></button>
                 </div>
             {/if}
         </aside>
 
-        <!-- Main Workspace Area -->
-        <main class="flex-1 flex flex-col gap-5 overflow-y-auto custom-scrollbar pr-2">
-            <!-- Mode Switcher Tabs -->
-            <div class="flex items-center justify-between pb-2 border-b border-white/5">
-                <div class="flex gap-2 p-1 bg-slate-900/50 rounded-xl border border-white/5">
-                    <button 
-                        on:click={() => activeTab = 'single'}
-                        class="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 {activeTab === 'single' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}"
-                    >
-                        <Layers size={14} /> Kiểm Tra Đơn Lẻ
-                    </button>
-                    <button 
-                        on:click={() => activeTab = 'batch'}
-                        class="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 {activeTab === 'batch' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}"
-                    >
-                        <FileSpreadsheet size={14} /> Đánh Giá Hàng Loạt (Batch CSV)
-                    </button>
-                </div>
-            </div>
-
-            {#if activeTab === 'single'}
-                {#if $currentResult}
-                    <div in:slide={{ duration: 300 }} class="mb-2">
-                        <HalluResult result={$currentResult} on:reset={resetFlow} />
-                    </div>
-                {/if}
-
-                <div class="bg-slate-900/20 border border-white/5 rounded-2xl p-6 backdrop-blur-sm transition-all duration-500 {$currentResult ? 'opacity-60 hover:opacity-100' : 'opacity-100'}">
-                    <HalluForm 
-                        bind:context={formContext}
-                        bind:prompt={formPrompt}
-                        bind:response={formResponse}
-                        {isLoading} 
-                        on:submit={handleAnalysis} 
-                    />
-                </div>
+        <!-- Workspace -->
+        <main class="min-w-0 flex-1 overflow-y-auto">
+            <div class="mx-auto max-w-[1200px] space-y-6 px-6 py-6 lg:px-8">
+                <nav class="flex gap-1 border-b border-line" aria-label="Chế độ kiểm tra">
+                    {#each TABS as tab}
+                        <button
+                            type="button"
+                            on:click={() => switchTab(tab.id)}
+                            aria-current={activeTab === tab.id ? 'page' : undefined}
+                            class="-mb-px h-10 border-b-2 px-3 text-[14px] transition-colors duration-150 {activeTab === tab.id ? 'border-accent text-ink' : 'border-transparent text-ink-2 hover:text-ink'}"
+                        >{tab.text}</button>
+                    {/each}
+                </nav>
 
                 {#if error}
-                    <div class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center font-mono">
-                        ⚠ {error}
-                    </div>
+                    <p class="rounded-lg bg-bad-mark px-4 py-3 text-[13px] text-bad" role="alert">{error}</p>
                 {/if}
-            {:else}
-                <div in:slide={{ duration: 300 }}>
+
+                {#if activeTab === 'rag'}
+                    {#if $currentResult && isRagResult}
+                        <TraceView result={$currentResult} on:reset={resetFlow} />
+                    {/if}
+                    <section class="rounded-xl border border-line bg-card p-6">
+                        <RagForm
+                            bind:question={ragQuestion}
+                            bind:contexts={ragContexts}
+                            bind:answer={ragAnswer}
+                            bind:groundTruth={ragGroundTruth}
+                            {isLoading}
+                            on:submit={handleRag}
+                        />
+                    </section>
+                {:else if activeTab === 'single'}
+                    {#if $currentResult && !isRagResult}
+                        <HalluResult result={$currentResult} on:reset={resetFlow} />
+                    {/if}
+                    <section class="rounded-xl border border-line bg-card p-6">
+                        <HalluForm
+                            bind:context={formContext}
+                            bind:prompt={formPrompt}
+                            bind:response={formResponse}
+                            {isLoading}
+                            on:submit={handleAnalysis}
+                        />
+                    </section>
+                {:else}
                     <BatchEvaluation {selectedProjectId} />
-                </div>
-            {/if}
+                {/if}
+
+                <p class="text-xs text-ink-3">
+                    ViAI-QA đánh giá câu trả lời của hệ thống RAG so với tài liệu được cung cấp, không thay thế tư vấn y khoa.
+                </p>
+            </div>
         </main>
     </div>
 </div>
-
-<style>
-    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
-</style>

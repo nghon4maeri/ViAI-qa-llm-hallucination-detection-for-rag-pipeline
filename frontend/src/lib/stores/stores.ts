@@ -1,6 +1,6 @@
 // frontend/src/lib/stores/stores.ts
 import { writable } from "svelte/store";
-import type { HalluInput, HalluOutput } from "$lib/api/api";
+import type { AuditResponse, HalluInput, HalluOutput } from "$lib/api/api";
 
 export interface HistoryItem extends HalluInput {
     id: string;
@@ -9,7 +9,7 @@ export interface HistoryItem extends HalluInput {
 }
 
 export const history = writable<HistoryItem[]>([]);
-export const currentResult = writable<HalluOutput | null>(null);
+export const currentResult = writable<AuditResponse | null>(null);
 
 export function addToHistory(input: HalluInput, result: HalluOutput) {
     history.update(h => [{
