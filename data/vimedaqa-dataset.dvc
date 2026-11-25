@@ -1,0 +1,6 @@
+outs:
+- md5: feffb6af9332f3f9c10950278f21fddc.dir
+  size: 23042113
+  nfiles: 3
+  hash: md5
+  path: vimedaqa-dataset

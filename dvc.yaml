@@ -1,5 +1,13 @@
 # dvc.yaml
 stages:
+  build_medical:
+    cmd: python ml/pipelines/build_medical_hallu.py
+    deps:
+      - ml/pipelines/build_medical_hallu.py
+      - data/vimedaqa-dataset
+    outs:
+      - data/vimedhallu-dataset
+
   embed:
     cmd: python ml/pipelines/embed.py
     deps:

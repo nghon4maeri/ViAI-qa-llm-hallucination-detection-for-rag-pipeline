@@ -93,3 +93,21 @@ stages:
       hash: md5
       md5: 186df838b232afdd914e68770d48fcbd
       size: 4400
+  build_medical:
+    cmd: python ml/pipelines/build_medical_hallu.py
+    deps:
+    - path: data/vimedaqa-dataset
+      hash: md5
+      md5: feffb6af9332f3f9c10950278f21fddc.dir
+      size: 23042113
+      nfiles: 3
+    - path: ml/pipelines/build_medical_hallu.py
+      hash: md5
+      md5: ccb8d97483af94050c842c990ff5ab79
+      size: 6750
+    outs:
+    - path: data/vimedhallu-dataset
+      hash: md5
+      md5: a414949ef4b1ffcdf3d92bee02417fdd.dir
+      size: 47008118
+      nfiles: 3

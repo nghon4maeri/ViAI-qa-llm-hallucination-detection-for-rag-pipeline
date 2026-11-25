@@ -1,6 +1,12 @@
 # ViAI-QA Improvement Roadmap: RAG Evaluation & Guardrail Platform
 
-**Status:** Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Next: Phase 5 (RAG trace view).
+**Status:** Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Medical dataset built; the baseline is blocked on downloading the Qwen weights (see [MEDICAL_DOMAIN.md](MEDICAL_DOMAIN.md)).
+
+## Domain focus
+
+**Healthcare (Vietnamese).** The platform stays domain-agnostic, but data, benchmarks, fine-tuning and the demo target medical RAG. See [MEDICAL_DOMAIN.md](MEDICAL_DOMAIN.md).
+
+Revised order: **medical dataset (ViMedHallu) ✅ → baseline + fine-tune → P5 trace view → P2 agent (+ LLM-written hard split) → P3 MCP → P6 medical RAG demo.**
 
 ## Goal
 
