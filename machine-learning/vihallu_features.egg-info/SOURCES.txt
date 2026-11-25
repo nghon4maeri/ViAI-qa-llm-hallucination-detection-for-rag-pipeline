@@ -1,7 +1,0 @@
-pyproject.toml
-vihallu_features/__init__.py
-vihallu_features.egg-info/PKG-INFO
-vihallu_features.egg-info/SOURCES.txt
-vihallu_features.egg-info/dependency_links.txt
-vihallu_features.egg-info/requires.txt
-vihallu_features.egg-info/top_level.txt
