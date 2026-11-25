@@ -56,6 +56,10 @@ LLM probabilities are cached in `features/<data>_llm_probs.csv` so fine-tuning c
 2. Copy the Qwen weights from a faster network into `$HF_HOME`.
 3. Train a medical model variant that does not need the LLM feature (PhoBERT plus cheap grounding features). This is faster, but it changes the model design.
 
+## Harder data (Phase 4)
+
+`ml/pipelines/generate_hard_medical.py` writes `data/vimedhallu-hard/vimedhallu-hard-{split}.csv`: Claude-written intrinsic/extrinsic rewrites (Batch API, Haiku 5.5) plus balanced gold rows. Report on it separately from the rule-based split, and only after a manual spot check (`reviewed` column). Reviewer feedback exports through `ml/pipelines/export_feedback.py`.
+
 ## Next steps
 
 1. Get the baseline Macro-F1 on ViMedHallu test, plus the same script on in-domain ViHallu rows (this also measures the Vistral-trained, Qwen-served gap).

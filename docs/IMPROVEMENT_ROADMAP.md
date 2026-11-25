@@ -1,6 +1,6 @@
 # ViAI-QA Improvement Roadmap: RAG Evaluation & Guardrail Platform
 
-**Status:** Phases 0, 1, 2, 3 and 5 (first pass) done. Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Medical dataset built; the baseline is blocked on downloading the Qwen weights (see [MEDICAL_DOMAIN.md](MEDICAL_DOMAIN.md)). Phase 5 first pass done.
+**Status:** Phases 0, 1, 2, 3, 4 and 5 (first pass) done. Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Medical dataset built; the baseline is blocked on downloading the Qwen weights (see [MEDICAL_DOMAIN.md](MEDICAL_DOMAIN.md)). Phase 5 first pass done.
 
 ## Domain focus
 
@@ -140,7 +140,25 @@ Haiku 5.5 has no server-side refusal fallback, so the `fallbacks` parameter is s
 - Thin Python SDK plus LangChain/LlamaIndex callback, on top of the REST API and API keys.
 - Online guardrail `POST /api/v1/rag/guard` → `pass / block / regenerate`.
 
-### Phase 4: Data flywheel
+### Phase 4: Data flywheel ✅ (pipelines built; first real runs need an API key / database)
+
+**Done (2026-11-25):**
+- **LLM hard split** `ml/pipelines/generate_hard_medical.py` (`submit` / `collect`).
+  - Claude rewrites a gold ViMedAQA answer so it carries exactly one intrinsic or one extrinsic error, in fluent chatbot Vietnamese. It uses only facts from the passage for intrinsic edits and only additions for extrinsic ones.
+  - Grounded gold rows from the same passages keep the split balanced.
+  - Uses the **Message Batches API** (50% cheaper) + `claude-haiku-5-5`, effort `low`, and a structured JSON output. About 600 rows ≈ **$0.06**.
+  - Rejects rewrites that are empty, unchanged, the wrong length, or truncated. Rows carry `generator`, `change` and `reviewed=false`, so the split is spot-checked before any number is reported on it.
+- **Feedback export** `ml/pipelines/export_feedback.py` (DVC stage `export_feedback`, needs `DATABASE_URL`) writes reviewed audits → `data/feedback/feedback-export.csv` in the ViHallu format.
+  - Labels are normalised: `CORRECT` → the audit's label, legacy `no_hallucination` → `no`.
+  - `model_label` is kept so the rows where the reviewer overruled the model can be weighted or inspected.
+- Tests: `tests/unit/test_flywheel.py` (9): a fake Batch API returning results in shuffled order, label normalisation, and export from the test database.
+
+**Closing the loop (blocked, same blocker as the baseline):** `ml/pipelines/train.py` needs PhoBERT embeddings and the 3 LLM `prob_*` features for every training row. ViMedHallu, the hard split and the feedback rows don't have the LLM features yet. `evaluate_detector.py` already computes and caches them (`features/<data>_llm_probs.csv`). Once the Qwen weights are available:
+1. Run it on each new CSV.
+2. Extend `train.py` to concatenate those sources with ViHallu.
+3. Compare on ViHallu OOF + ViMedHallu test + the hard split before `promote`.
+
+**Original plan:**
 - Synthetic data agent: correct QA plus controlled intrinsic/extrinsic corruptions from Vietnamese documents → DVC dataset.
 - Merge with `audit_feedback` → `train` stage → `auto_promote_registry.py`.
 

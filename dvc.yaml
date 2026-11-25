@@ -40,6 +40,15 @@ stages:
     outs:
       - predictions/vihallu_infer_predictions.csv
 
+  # Reviewer feedback from Postgres (needs DATABASE_URL); re-run before each retraining round
+  export_feedback:
+    cmd: python ml/pipelines/export_feedback.py
+    deps:
+      - ml/pipelines/export_feedback.py
+    outs:
+      - data/feedback/feedback-export.csv
+    always_changed: true
+
   promote:
     cmd: python ml/pipelines/promote.py
     deps:
