@@ -3,12 +3,13 @@ import time
 import uuid
 import math
 from datetime import datetime, timezone
-from typing import Optional, Tuple, List
+from typing import Callable, Optional, Tuple, List
 from starlette.concurrency import run_in_threadpool
 
 from backend.app.modules.audits.repository import AuditRepository
 from backend.app.modules.audits.schemas import (
     AuditCreateRequest,
+    RagAuditCreateRequest,
     AuditResponse,
     AuditSummary,
     AuditListResponse,
@@ -18,6 +19,7 @@ from backend.app.modules.audits.schemas import (
 from backend.app.evaluation.interfaces import EvaluationEngine
 from backend.app.evaluation.schemas import EvaluationInput
 from backend.app.evaluation.cache import evaluation_cache
+from backend.app.evaluation.rag import evaluate_rag
 from backend.app.core.logging import logger
 from backend.app.core.metrics import record_evaluation_metric, record_feedback_metric
 
@@ -33,9 +35,7 @@ class AuditService:
         trace_id: Optional[str] = None
     ) -> AuditResponse:
         # Step 1: Resolve project ID
-        project_id = request.project_id
-        if not project_id:
-            project_id = self.repo.get_or_create_default_project()
+        project_id = request.project_id or self.repo.get_or_create_default_project()
 
         # Step 2: Persist initial audit record in PROCESSING state
         audit = self.repo.create_pending_audit(
@@ -45,43 +45,75 @@ class AuditService:
             response=request.response,
             trace_id=trace_id
         )
+        return await self._run_audit(audit, lambda: self._evaluate_single(request))
 
+    async def execute_rag_audit(
+        self,
+        request: RagAuditCreateRequest,
+        trace_id: Optional[str] = None
+    ) -> AuditResponse:
+        project_id = request.project_id or self.repo.get_or_create_default_project()
+
+        # context/prompt/response keep the legacy columns readable for history and batch export
+        audit = self.repo.create_pending_audit(
+            project_id=project_id,
+            context="\n\n".join(request.contexts),
+            prompt=request.question,
+            response=request.answer,
+            trace_id=trace_id,
+            contexts=request.contexts
+        )
+        return await self._run_audit(audit, lambda: self._evaluate_rag(request))
+
+    def _evaluate_single(self, request: AuditCreateRequest) -> dict:
+        # Step 3: Check In-Memory LRU Cache first (< 0.5ms on hit)
+        result = evaluation_cache.get(request.context, request.prompt, request.response)
+        if result is None:
+            eval_input = EvaluationInput(
+                context=request.context,
+                prompt=request.prompt,
+                response=request.response
+            )
+            result = self.engine.evaluate(eval_input)
+            evaluation_cache.set(request.context, request.prompt, request.response, result)
+        return {
+            "label": result.label,
+            "confidence": result.confidence,
+            "breakdown": result.breakdown.model_dump() if result.breakdown else None,
+            "model_version": result.model_version,
+        }
+
+    def _evaluate_rag(self, request: RagAuditCreateRequest) -> dict:
+        result = evaluate_rag(self.engine, request)
+        return {
+            "label": result.label,
+            "confidence": result.confidence,
+            "breakdown": None,
+            "model_version": result.model_version,
+            "claims": [c.model_dump() for c in result.claims],
+            "faithfulness": result.faithfulness,
+        }
+
+    async def _run_audit(self, audit, evaluate: Callable[[], dict]) -> AuditResponse:
         start_time = time.perf_counter()
         try:
-            # Step 3: Check In-Memory LRU Cache first (< 0.5ms on hit)
-            cached_result = evaluation_cache.get(request.context, request.prompt, request.response)
-            if cached_result:
-                result = cached_result
-                latency_ms = (time.perf_counter() - start_time) * 1000.0
-                logger.info(f"Audit {audit.id} Cache HIT ({latency_ms:.2f}ms)")
-            else:
-                eval_input = EvaluationInput(
-                    context=request.context,
-                    prompt=request.prompt,
-                    response=request.response
-                )
-                result = await run_in_threadpool(self.engine.evaluate, eval_input)
-                evaluation_cache.set(request.context, request.prompt, request.response, result)
-                latency_ms = (time.perf_counter() - start_time) * 1000.0
+            fields = await run_in_threadpool(evaluate)
+            latency_ms = (time.perf_counter() - start_time) * 1000.0
 
             # Step 4: Persist successful evaluation (Status: COMPLETED)
-            breakdown_dict = result.breakdown.model_dump() if result.breakdown else None
             audit = self.repo.update_completed_audit(
                 audit_id=audit.id,
-                label=result.label,
-                confidence=result.confidence,
-                breakdown=breakdown_dict,
-                model_version=result.model_version,
                 latency_ms=latency_ms,
-                completed_at=datetime.now(timezone.utc)
+                completed_at=datetime.now(timezone.utc),
+                **fields
             )
             logger.info(
                 f"Audit {audit.id} COMPLETED: label={audit.label}, "
                 f"confidence={audit.confidence:.4f}, latency={latency_ms:.2f}ms"
             )
             record_evaluation_metric(
-                model_version=result.model_version,
-                label=result.label,
+                model_version=audit.model_version,
+                label=audit.label,
                 duration_sec=latency_ms / 1000.0
             )
         except Exception as exc:
@@ -127,6 +159,7 @@ class AuditService:
                 status=item.status,
                 label=item.label,
                 confidence=item.confidence,
+                faithfulness=item.faithfulness,
                 prompt=item.prompt,
                 response=item.response,
                 has_feedback=bool(item.feedback),

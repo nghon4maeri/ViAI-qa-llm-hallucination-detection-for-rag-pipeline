@@ -69,7 +69,7 @@ def main():
         sys.exit(0)
 
     # Delegate to full promotion logic
-    from scripts.auto_promote_registry import ensure_model_exists, promote_to_production
+    from ml.pipelines.promote import ensure_model_exists, promote_to_production
     ensure_model_exists(client, MODEL_NAME)
     version = promote_to_production(client, MODEL_NAME, best_run)
     print(f"[DONE] Promoted '{MODEL_NAME}' v{version} → alias 'production'")

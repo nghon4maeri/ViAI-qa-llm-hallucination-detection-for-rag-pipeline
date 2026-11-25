@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     DISABLE_MODEL: bool = os.getenv("DISABLE_MODEL", "false").lower() == "true"
     MODEL_VERSION: str = os.getenv("MODEL_VERSION", "1.0.0")
     MODEL_PATH: str = os.getenv("MODEL_PATH", "models/phobert_finetuned_model")
-    LGBM_MODEL_PATH: str = os.getenv("LGBM_MODEL_PATH", "models/lgbm/fold_0.txt")
+    LGBM_MODEL_DIR: str = os.getenv("LGBM_MODEL_DIR", "models/lgbm")
 
     # Observability & Tracing (Explicitly disabled by default for local development)
     ENABLE_TRACING: bool = os.getenv("ENABLE_TRACING", "false").lower() == "true"

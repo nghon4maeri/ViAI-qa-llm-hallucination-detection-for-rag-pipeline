@@ -9,7 +9,9 @@ env/
 .env
 .vscode/
 
-models/
+/models/*
+!/models/.gitignore
+!/models/*.dvc
 result/
 predictions/
 
@@ -48,11 +50,14 @@ terraform.tfvars
 frontend/.vercel
 .svelte-kit-old
 
-config-for-jenkins/**/secrets*
-config-for-jenkins/**/credentials*
+deploy/ci/**/secrets*
+deploy/ci/**/credentials*
+deploy/ci/kubeconfig*
 config_flat
 auth-file.venv_mlflow/
-models/
+/models/*
+!/models/.gitignore
+!/models/*.dvc
 backend/model_store/
 *.pth
 *.pkl

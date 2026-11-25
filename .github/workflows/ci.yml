@@ -27,7 +27,7 @@ jobs:
       - name: Build CI Docker image
         run: |
           docker build \
-            -f docker/Dockerfile.ci \
+            -f deploy/docker/Dockerfile.ci \
             -t hallucination-ci:${{ github.sha }} .
 
       - name: Run unit & integration tests with coverage
@@ -147,7 +147,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/Dockerfile.backend
+          file: deploy/docker/Dockerfile.backend
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

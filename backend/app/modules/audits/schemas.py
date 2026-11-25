@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, field_validator
-from backend.app.evaluation.schemas import EvaluationBreakdown
+from backend.app.evaluation.schemas import EvaluationBreakdown, ClaimVerdict, RagEvaluationInput
 
 
 class AuditCreateRequest(BaseModel):
@@ -11,6 +11,10 @@ class AuditCreateRequest(BaseModel):
     context: str = Field(..., min_length=1, max_length=15000, description="Reference factual text")
     prompt: str = Field(..., min_length=1, max_length=2000, description="Question or prompt sent to LLM")
     response: str = Field(..., min_length=1, max_length=5000, description="AI-generated response to audit")
+
+
+class RagAuditCreateRequest(RagEvaluationInput):
+    project_id: Optional[uuid.UUID] = Field(None, description="Target project ID; defaults to default workspace if omitted")
 
 
 class FeedbackCreateRequest(BaseModel):
@@ -47,6 +51,9 @@ class AuditResponse(BaseModel):
     label: Optional[str] = None
     confidence: Optional[float] = None
     breakdown: Optional[EvaluationBreakdown] = None
+    contexts: Optional[List[str]] = None
+    claims: Optional[List[ClaimVerdict]] = None
+    faithfulness: Optional[float] = None
     context: str
     prompt: str
     response: str
@@ -69,6 +76,7 @@ class AuditSummary(BaseModel):
     status: str
     label: Optional[str] = None
     confidence: Optional[float] = None
+    faithfulness: Optional[float] = None
     prompt: str
     response: str
     has_feedback: bool = False

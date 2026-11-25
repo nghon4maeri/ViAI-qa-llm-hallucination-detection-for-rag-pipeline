@@ -65,15 +65,15 @@ flowchart TD
 - **Dependencies**: S1-001
 - **Files Involved**:
   - `backend/app/core/database.py` (Create)
-  - `docker/init-db.sh` (Create)
+  - `deploy/docker/init-db.sh` (Create)
   - `docker-compose.yml` (Modify)
 - **Objective**: Establish robust PostgreSQL connection pooling, create the application database `viai_qa`, and provide the FastAPI `get_db` dependency.
 - **Implementation Steps**:
   1. Create `backend/app/core/database.py` initializing `create_engine` with `pool_pre_ping=True`, `pool_size=10`, `max_overflow=20`.
   2. Implement `SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)`.
   3. Implement dependency generator `def get_db() -> Generator[Session, None, None]`.
-  4. Create `docker/init-db.sh` to ensure PostgreSQL creates both `mlflow` and `viai_qa` databases on fresh startup.
-  5. Mount `docker/init-db.sh` into `db` service inside `docker-compose.yml` under `/docker-entrypoint-initdb.d/`.
+  4. Create `deploy/docker/init-db.sh` to ensure PostgreSQL creates both `mlflow` and `viai_qa` databases on fresh startup.
+  5. Mount `deploy/docker/init-db.sh` into `db` service inside `docker-compose.yml` under `/docker-entrypoint-initdb.d/`.
 - **Required Tests**:
   - `tests/unit/test_database.py`: Test `get_db` yielding session and rolling back on unhandled exceptions.
 - **Acceptance Criteria**:
@@ -124,7 +124,7 @@ flowchart TD
 - **Implementation Steps**:
   1. Create `interfaces.py` declaring `EvaluationEngine(Protocol)` with `evaluate`, `warmup`, and `is_ready`.
   2. Implement `schemas.py` defining `EvaluationInput`, `EvaluationResult`, and `EvaluationBreakdown`.
-  3. In `existing_pipeline.py`, encapsulate lazy initialization of `backend.model.inference_model.HallucinationPipeline`. Extract `p_entailment`, `p_neutral`, `p_contradiction`, `new_entity_count`, `new_entities`, `entity_overlap_ratio`, and `vistral_prob` to populate `EvaluationBreakdown`.
+  3. In `existing_pipeline.py`, encapsulate lazy initialization of `backend.app.inference.inference_model.HallucinationPipeline`. Extract `p_entailment`, `p_neutral`, `p_contradiction`, `new_entity_count`, `new_entities`, `entity_overlap_ratio`, and `vistral_prob` to populate `EvaluationBreakdown`.
   4. In `mock_engine.py`, create a rule-based mock engine (e.g., checks keyword "Paris" or "sai" to return deterministic labels) that requires 0 model weights.
 - **Required Tests**:
   - `tests/unit/test_evaluation_adapter.py`: Verify `MockEngine` implements protocol and returns expected `EvaluationResult`.
@@ -264,7 +264,7 @@ flowchart TD
 - **Dependencies**: S1-002, S1-007
 - **Files Involved**:
   - `docker-compose.yml` (Modify)
-  - `nginx/nginx.conf` (Modify)
+  - `deploy/nginx/nginx.conf` (Modify)
 - **Objective**: Eliminate direct public access to backend port 8000, route `/api/v1/` through NGINX on port 80, and add Compose profiles for optional services.
 - **Implementation Steps**:
   1. In `docker-compose.yml`:
@@ -272,7 +272,7 @@ flowchart TD
      - Add `profiles: ["monitoring"]` to `prometheus`, `grafana`, `loki`, `promtail`.
      - Add `profiles: ["tracing"]` to `jaeger`.
      - Add `profiles: ["mlops"]` to `minio`, `minio-init`, `mlflow`.
-  2. In `nginx/nginx.conf`:
+  2. In `deploy/nginx/nginx.conf`:
      - Route `location /api/v1/` to `http://backend:8080/api/v1/`.
      - Route `location /` to `http://frontend:5173/` (dev) or static root (prod).
      - Maintain rate limiting on `/api/v1/audits` (10r/m, burst 3).

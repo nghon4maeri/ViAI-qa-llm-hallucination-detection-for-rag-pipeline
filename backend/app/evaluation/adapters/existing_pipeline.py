@@ -17,7 +17,7 @@ class ExistingPipelineAdapter(EvaluationEngine):
 
     def _get_pipeline(self):
         if self._pipeline is None:
-            from backend.model.inference_model import get_hallu_model
+            from backend.app.inference.inference_model import get_hallu_model
             self._pipeline = get_hallu_model()
         return self._pipeline
 

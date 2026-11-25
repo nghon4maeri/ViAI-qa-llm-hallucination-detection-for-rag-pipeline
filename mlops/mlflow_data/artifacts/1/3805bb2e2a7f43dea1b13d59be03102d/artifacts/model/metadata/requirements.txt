@@ -1,5 +1,0 @@
-lightgbm
-mlflow==2.11.3
-numpy
-pandas
-scikit-learn

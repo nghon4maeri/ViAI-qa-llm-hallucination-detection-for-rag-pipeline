@@ -8,7 +8,7 @@ Usage:
     # Outputs: s3://vihallu-mlflow/artifacts/1/<run_id>/artifacts/model
     
     # Or update inference-service.yaml directly:
-    python scripts/resolve_storage_uri.py --update-yaml mlops/kserve/inference-service.yaml
+    python scripts/resolve_storage_uri.py --update-yaml deploy/k8s/kserve/inference-service.yaml
 """
 
 import os

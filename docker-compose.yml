@@ -52,7 +52,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+      - ./deploy/docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d mlflow"]
       interval: 5s
@@ -64,7 +64,7 @@ services:
   mlflow:
     container_name: hallucination-mlflow
     build:
-      context: mlops/mlflow
+      context: deploy/mlflow
       dockerfile: Dockerfile
     profiles: ["mlops"]
     ports:
@@ -96,7 +96,7 @@ services:
     container_name: hallucination-backend
     build:
       context: .
-      dockerfile: docker/Dockerfile.backend
+      dockerfile: deploy/docker/Dockerfile.backend
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/viai_qa
       - ENABLE_TRACING=false
@@ -125,7 +125,7 @@ services:
     container_name: hallucination-frontend
     build:
       context: .
-      dockerfile: docker/Dockerfile.frontend.dev
+      dockerfile: deploy/docker/Dockerfile.frontend.dev
     ports:
       - "5173:5173"
     volumes:
@@ -269,7 +269,7 @@ services:
     container_name: hallucination-ci
     build:
       context: .
-      dockerfile: docker/Dockerfile.ci
+      dockerfile: deploy/docker/Dockerfile.ci
     profiles: ["ci"]
     environment:
       - DISABLE_MODEL=true
@@ -289,7 +289,7 @@ services:
   jenkins:
     build:
       context: .
-      dockerfile: docker/Dockerfile.jenkins
+      dockerfile: deploy/docker/Dockerfile.jenkins
     container_name: hallucination-jenkins
     profiles: ["ci"]
     user: root
@@ -311,7 +311,7 @@ services:
   nginx-gateway:
     build:
       context: .
-      dockerfile: docker/Dockerfile.nginx
+      dockerfile: deploy/docker/Dockerfile.nginx
     container_name: hallucination-nginx
     ports:
       - "80:80"
@@ -319,8 +319,8 @@ services:
       - backend
       - frontend
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/api_keys.conf:/etc/nginx/api_keys.conf:ro
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/api_keys.conf:/etc/nginx/api_keys.conf:ro
       - nginx_logs:/var/log/nginx
     networks:
       - ai-network

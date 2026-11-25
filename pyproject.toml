@@ -1,0 +1,14 @@
+[project]
+name = "viai-qa"
+version = "2.1.0"
+description = "Vietnamese RAG evaluation & hallucination guardrail platform (ViHallu detector + FastAPI + MLOps)"
+readme = "README.md"
+requires-python = ">=3.10"
+# Dependencies stay in requirements-*.txt (serving / dev / ci / test images pin different sets)
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: very slow tests (LLMs, transformers, GPU, large models)",
+    "integration: full pipeline tests",
+]

@@ -1,6 +1,5 @@
 # tests/unit/test_schema.py
-from backend.schemas.hallu_input import HalluInput
-from backend.schemas.hallu_output import HalluOutput
+from backend.app.modules.legacy.schemas import HalluInput, HalluOutput
 
 
 def test_hallu_input_schema():

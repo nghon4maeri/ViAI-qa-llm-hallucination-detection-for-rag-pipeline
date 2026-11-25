@@ -37,13 +37,15 @@ class AuditRepository:
         context: str,
         prompt: str,
         response: str,
-        trace_id: Optional[str] = None
+        trace_id: Optional[str] = None,
+        contexts: Optional[List[str]] = None
     ) -> AuditRunModel:
         audit = AuditRunModel(
             project_id=project_id,
             context=context,
             prompt=prompt,
             response=response,
+            contexts=contexts,
             status="PROCESSING",
             model_version=settings.MODEL_VERSION,
             trace_id=trace_id,
@@ -61,7 +63,9 @@ class AuditRepository:
         breakdown: Optional[Dict[str, Any]],
         model_version: str,
         latency_ms: float,
-        completed_at: datetime
+        completed_at: datetime,
+        claims: Optional[List[Dict[str, Any]]] = None,
+        faithfulness: Optional[float] = None
     ) -> AuditRunModel:
         audit = self.get_by_id(audit_id)
         if not audit:
@@ -70,6 +74,8 @@ class AuditRepository:
         audit.label = label
         audit.confidence = confidence
         audit.breakdown = breakdown
+        audit.claims = claims
+        audit.faithfulness = faithfulness
         audit.model_version = model_version
         audit.latency_ms = latency_ms
         audit.status = "COMPLETED"

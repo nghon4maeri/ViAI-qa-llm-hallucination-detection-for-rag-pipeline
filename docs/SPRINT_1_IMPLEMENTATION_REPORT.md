@@ -26,15 +26,15 @@ All **11 Backlog Tasks (S1-001 through S1-011)** and the **4 Mandatory Readiness
 | Task ID | Task Title | Priority | Status | Key Deliverables & Files |
 |---|---|---|---|---|
 | **S1-001** | Dependencies & Configuration | P0 | **DONE** | [`requirements-serving.txt`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/requirements-serving.txt), [`requirements-ci.txt`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/requirements-ci.txt), [`backend/app/core/config.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/core/config.py), [`backend/app/core/logging.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/core/logging.py) |
-| **S1-002** | Database Engine & Pooling | P0 | **DONE** | [`backend/app/core/database.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/core/database.py), [`docker/init-db.sh`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/docker/init-db.sh) |
+| **S1-002** | Database Engine & Pooling | P0 | **DONE** | [`backend/app/core/database.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/core/database.py), [`deploy/docker/init-db.sh`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/deploy/docker/init-db.sh) |
 | **S1-003** | Models & Baseline Alembic Migration | P0 | **DONE** | [`backend/app/models/`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/models/), [`alembic.ini`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/alembic.ini), [`backend/alembic/`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/alembic/) |
-| **S1-004** | Evaluation Engine Boundary & Adapters | P0 | **DONE** | [`backend/app/evaluation/`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/evaluation/), [`backend/model/inference_model.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/model/inference_model.py) |
+| **S1-004** | Evaluation Engine Boundary & Adapters | P0 | **DONE** | [`backend/app/evaluation/`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/evaluation/), [`backend/app/inference/inference_model.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/inference/inference_model.py) |
 | **S1-005** | Audit Repository & Schemas | P0 | **DONE** | [`backend/app/modules/audits/repository.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/modules/audits/repository.py), [`backend/app/modules/audits/schemas.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/modules/audits/schemas.py) |
 | **S1-006** | Audit Orchestration Service | P0 | **DONE** | [`backend/app/modules/audits/service.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/modules/audits/service.py) |
 | **S1-007** | FastAPI Audits Router | P0 | **DONE** | [`backend/app/modules/audits/router.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/modules/audits/router.py), [`backend/main.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/main.py) |
 | **S1-008** | Projects Router & Default Workspace | P1 | **DONE** | [`backend/app/modules/projects/`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/modules/projects/), [`backend/main.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/main.py) |
 | **S1-009** | Testing Suite & CI Conformance | P0 | **DONE** | [`tests/conftest.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/tests/conftest.py), [`tests/unit/test_audit_service.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/tests/unit/test_audit_service.py), [`tests/unit/test_audit_repository.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/tests/unit/test_audit_repository.py), [`tests/integration/test_audits_api.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/tests/integration/test_audits_api.py), [`tests/integration/test_projects_api.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/tests/integration/test_projects_api.py) |
-| **S1-010** | Refactor Docker Compose & NGINX Gateway | P1 | **DONE** | [`docker-compose.yml`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/docker-compose.yml), [`nginx/nginx.conf`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/nginx/nginx.conf) |
+| **S1-010** | Refactor Docker Compose & NGINX Gateway | P1 | **DONE** | [`docker-compose.yml`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/docker-compose.yml), [`deploy/nginx/nginx.conf`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/deploy/nginx/nginx.conf) |
 | **S1-011** | Update Frontend API Client & Fix Layout | P1 | **DONE** | [`frontend/src/lib/api/api.ts`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/frontend/src/lib/api/api.ts), [`frontend/src/routes/+layout.svelte`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/frontend/src/routes/+layout.svelte) |
 
 ---
@@ -43,7 +43,7 @@ All **11 Backlog Tasks (S1-001 through S1-011)** and the **4 Mandatory Readiness
 
 ### 3.1 Files Created (17 files)
 1. `alembic.ini` — Alembic CLI configuration pointing to `backend/alembic`.
-2. `docker/init-db.sh` — PostgreSQL entrypoint script ensuring `viai_qa` database existence.
+2. `deploy/docker/init-db.sh` — PostgreSQL entrypoint script ensuring `viai_qa` database existence.
 3. `backend/alembic/env.py` — Alembic migration runner with SQLAlchemy 2.0 models and cross-dialect SQLite/Postgres support.
 4. `backend/alembic/script.py.mako` — Migration template generator.
 5. `backend/alembic/versions/001_initial_schema.py` — Initial migration creating `projects`, `audit_runs`, `audit_feedback`, and `api_keys`.
@@ -74,10 +74,10 @@ All **11 Backlog Tasks (S1-001 through S1-011)** and the **4 Mandatory Readiness
 ### 3.2 Files Modified (10 files)
 1. `requirements-serving.txt` — Added `sqlalchemy>=2.0.25`, `alembic>=1.13.1`, `psycopg2-binary>=2.9.9`, `pydantic-settings>=2.1.0`.
 2. `requirements-ci.txt` — Mirrored serving requirements for test execution.
-3. `backend/model/inference_model.py` — Refactored `predict()` to return calculated intermediate metrics (`p_entailment`, `new_entity_count`, `active_guardrail`, etc.) alongside `label` and `confidence`.
+3. `backend/app/inference/inference_model.py` — Refactored `predict()` to return calculated intermediate metrics (`p_entailment`, `new_entity_count`, `active_guardrail`, etc.) alongside `label` and `confidence`.
 4. `backend/main.py` — Mounted `/api/v1/audits` and `/api/v1/projects`; added DB health check; conditioned OpenTelemetry tracing on `ENABLE_TRACING`.
-5. `docker-compose.yml` — Removed port 8000; mounted `docker/init-db.sh`; added profiles (`monitoring`, `tracing`, `mlops`, `ci`).
-6. `nginx/nginx.conf` — Added upstream proxying for frontend on `/` with WebSocket upgrade; added `/api/v1/` route with rate limiting.
+5. `docker-compose.yml` — Removed port 8000; mounted `deploy/docker/init-db.sh`; added profiles (`monitoring`, `tracing`, `mlops`, `ci`).
+6. `deploy/nginx/nginx.conf` — Added upstream proxying for frontend on `/` with WebSocket upgrade; added `/api/v1/` route with rate limiting.
 7. `frontend/src/routes/+layout.svelte` — Removed stray string `clear` on line 3.
 8. `frontend/src/lib/api/api.ts` — Updated API base to `/api/v1/audits`, added TypeScript interfaces and audit history/detail helpers.
 9. `tests/conftest.py` — Added SQLite in-memory database fixture, `TestClient` fixture with dependency overrides, and engine mocks.
@@ -242,7 +242,7 @@ Alembic migrations were verified using `alembic upgrade head` and `alembic downg
 ### 6.1 Condition 1 Resolution
 In the legacy codebase, `inference_model.py` computed NLI, NER, and Vistral features as local variables, but only returned `{"label": ..., "confidence": ...}`.
 We resolved this without breaking backward compatibility:
-- Lines 290–334 of [`backend/model/inference_model.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/model/inference_model.py#L290-L334) now attach intermediate features to the returned dictionary.
+- Lines 290–334 of [`backend/app/inference/inference_model.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/inference/inference_model.py#L290-L334) now attach intermediate features to the returned dictionary.
 - `ExistingPipelineAdapter` maps them to `EvaluationBreakdown`:
   - `nli_entailment`: `p_entailment`
   - `nli_neutral`: `p_neutral`
@@ -261,7 +261,7 @@ We resolved this without breaking backward compatibility:
 - In [`docker-compose.yml`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/docker-compose.yml):
   - Removed host port mapping `8000:8080` from `backend`. Replaced with internal container port `expose: - "8080"`.
   - External traffic can only access the application via NGINX on port `80`.
-- In [`nginx/nginx.conf`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/nginx/nginx.conf):
+- In [`deploy/nginx/nginx.conf`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/deploy/nginx/nginx.conf):
   - `location /` $\rightarrow$ Proxies to SvelteKit dev server (`frontend:5173`) with WebSocket upgrade headers (`$http_upgrade`).
   - `location /api/v1/` $\rightarrow$ Proxies to FastAPI backend (`backend:8080/api/v1/`) with rate limiting (10 req/min, burst 5), allowing frontend requests without 401 lockout.
   - `location /api/predict` $\rightarrow$ Legacy endpoint requiring API key authentication.
@@ -367,7 +367,7 @@ tests/integration/test_projects_api.py::test_create_duplicate_project_disambigua
 
 ## 10. Known Limitations & Unresolved Issues
 
-1. **LightGBM Shape Mismatch Warning**: The pre-trained LightGBM artifact `vietnamese_hallucination_lgbm.txt` expects 778 features while the pipeline extracts 783 features. The adapter uses `predict_disable_shape_check=True` with a single isolated line in `backend/model/inference_model.py`. Retraining the LightGBM classifier with matching feature dimensions is recommended for Sprint 2.
+1. **LightGBM Shape Mismatch Warning**: The pre-trained LightGBM artifact `vietnamese_hallucination_lgbm.txt` expects 778 features while the pipeline extracts 783 features. The adapter uses `predict_disable_shape_check=True` with a single isolated line in `backend/app/inference/inference_model.py`. Retraining the LightGBM classifier with matching feature dimensions is recommended for Sprint 2.
 2. **Frontend UI History View**: The frontend client (`api.ts`) now provides `fetchAuditHistory()` and `fetchAuditDetail()`, but the Svelte UI sidebar is still wired to an in-memory Svelte store. Full UI integration for database-persisted history browsing is scheduled for Sprint 2.
 3. **Human Annotation**: The `audit_feedback` database table was provisioned in migration `001_initial_schema`, but the feedback submission endpoint (`POST /api/v1/audits/{id}/feedback`) is scheduled for Sprint 2.
 

@@ -13,6 +13,7 @@ from backend.app.modules.audits.repository import AuditRepository
 from backend.app.modules.audits.service import AuditService
 from backend.app.modules.audits.schemas import (
     AuditCreateRequest,
+    RagAuditCreateRequest,
     AuditResponse,
     AuditListResponse,
     FeedbackCreateRequest,
@@ -55,6 +56,23 @@ async def create_audit(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Audit evaluation failed: {str(exc)}"
+        )
+
+
+@router.post("/rag", response_model=AuditResponse, status_code=status.HTTP_201_CREATED)
+async def create_rag_audit(
+    request: RagAuditCreateRequest,
+    req: Request,
+    service: AuditService = Depends(get_audit_service)
+):
+    """Evaluate one RAG turn: each answer sentence is checked against every retrieved chunk."""
+    trace_id = getattr(req.state, "trace_id", None) if hasattr(req, "state") else None
+    try:
+        return await service.execute_rag_audit(request, trace_id=trace_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"RAG audit evaluation failed: {str(exc)}"
         )
 
 

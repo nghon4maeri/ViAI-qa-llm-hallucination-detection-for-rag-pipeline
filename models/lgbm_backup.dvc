@@ -1,0 +1,6 @@
+outs:
+- md5: b02965e01e8906e10a943d609fc454b9.dir
+  size: 32921564
+  nfiles: 5
+  hash: md5
+  path: lgbm_backup

@@ -63,7 +63,7 @@ The table below verifies that functional requirements from the PRD map directly 
   )
   ```
 - **Ground Truth in Source Code**:
-  Inspection of [`backend/model/inference_model.py#L296-L333`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/model/inference_model.py#L296-L333) reveals that `predict()` returns **only** two dictionary keys:
+  Inspection of [`backend/app/inference/inference_model.py#L296-L333`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/inference/inference_model.py#L296-L333) reveals that `predict()` returns **only** two dictionary keys:
   ```python
   return {
       "label": self._normalize_label(original_label),
@@ -76,7 +76,7 @@ The table below verifies that functional requirements from the PRD map directly 
 - **Required Fix**:
   The adapter must either:
   1. Call the pipeline's sub-methods directly (`_get_nli_features`, `_get_ner_features`, `_get_vistral_probs`), OR
-  2. A minor 5-line edit to [`backend/model/inference_model.py#L296-L333`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/model/inference_model.py#L296-L333) must be authorized to attach the breakdown metrics to the returned dictionary.
+  2. A minor 5-line edit to [`backend/app/inference/inference_model.py#L296-L333`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/inference/inference_model.py#L296-L333) must be authorized to attach the breakdown metrics to the returned dictionary.
 
 ---
 
@@ -84,7 +84,7 @@ The table below verifies that functional requirements from the PRD map directly 
 - **Claimed in Plan**:
   In [`docs/MVP_DECISIONS_AND_ASSUMPTIONS.md#ADR-004`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/docs/MVP_DECISIONS_AND_ASSUMPTIONS.md#ADR-004), NGINX port 80 becomes the single ingress point for both Frontend and external API calls.
 - **Ground Truth in Source Code**:
-  Inspection of [`nginx/nginx.conf#L38-L63`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/nginx/nginx.conf#L38-L63) reveals:
+  Inspection of [`deploy/nginx/nginx.conf#L38-L63`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/deploy/nginx/nginx.conf#L38-L63) reveals:
   ```nginx
   location /api/ {
       if ($api_key_valid = 0) {
@@ -104,7 +104,7 @@ The table below verifies that functional requirements from the PRD map directly 
 
 ### 3.3 Database Feasibility: Existing Docker Volumes
 - **Claimed in Plan**:
-  [`docs/SPRINT_1_BACKLOG.md#S1-002`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/docs/SPRINT_1_BACKLOG.md#S1-002) mounts `docker/init-db.sh` into `/docker-entrypoint-initdb.d/` to execute `CREATE DATABASE viai_qa;`.
+  [`docs/SPRINT_1_BACKLOG.md#S1-002`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/docs/SPRINT_1_BACKLOG.md#S1-002) mounts `deploy/docker/init-db.sh` into `/docker-entrypoint-initdb.d/` to execute `CREATE DATABASE viai_qa;`.
 - **Ground Truth in Docker**:
   PostgreSQL only runs scripts in `/docker-entrypoint-initdb.d/` on **initial cluster creation** when the data directory is empty. If a developer previously ran `docker compose up -d db`, the volume `postgres_data` already contains initialized data, and `init-db.sh` will **silently be ignored**.
 - **Impact**:
@@ -205,7 +205,7 @@ To guarantee smooth execution by another coding agent, the following minor amend
 ### 2. Amendments to `docs/SPRINT_1_BACKLOG.md`
 - **Task S1-010 (Docker Compose & NGINX Gateway)**:  
   Explicitly append:
-  1. Add `location / { proxy_pass http://frontend:5173; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; }` to `nginx/nginx.conf`.
+  1. Add `location / { proxy_pass http://frontend:5173; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; }` to `deploy/nginx/nginx.conf`.
   2. For `location /api/v1/`, permit requests with missing API keys in development mode, or configure the frontend API client (`S1-011`) to send `X-API-Key: vihallu-dev-key-local`.
 - **Task S1-002 (Database Setup)**:  
   Add instruction to run `docker compose down -v` if upgrading an existing environment, or add a Python-level auto-create helper.

@@ -13,11 +13,11 @@ pipeline {
 
         K8S_NAMESPACE  = 'hallucination-prod'
         HELM_RELEASE   = 'hallucination-backend'
-        HELM_CHART_PATH = './kubernetes/charts/hallucination-backend'
-        HELM_VALUES    = './kubernetes/values/backend-prod.yaml'
+        HELM_CHART_PATH = './deploy/k8s/charts/hallucination-backend'
+        HELM_VALUES    = './deploy/k8s/values/backend-prod.yaml'
 
         KSERVE_ISVC    = 'hallucination-detector'
-        KSERVE_MANIFEST = './mlops/kserve/inference-service.yaml'
+        KSERVE_MANIFEST = './deploy/k8s/kserve/inference-service.yaml'
         GCS_BUCKET     = 'vihallu-models'
         GCS_MODEL_URI  = 'gs://vihallu-models/hallucination-detector/model'
         INGRESS_IP     = '136.110.57.217'
@@ -71,7 +71,7 @@ pipeline {
             }
             steps {
                 sh '''
-                    docker build -f docker/Dockerfile.ci \
+                    docker build -f deploy/docker/Dockerfile.ci \
                         -t hallucination-ci:${GIT_SHA_SHORT} .
 
                     CONTAINER_ID=$(docker create hallucination-ci:${GIT_SHA_SHORT} \
@@ -134,10 +134,10 @@ pipeline {
                         "TF_VAR_ghcr_username=${GHCR_USERNAME}",
                         "TF_VAR_ghcr_token=${GHCR_TOKEN}"
                     ]) {
-                        dir('iac/terraform/gke') {
+                        dir('deploy/iac/terraform/gke') {
                             sh 'terraform init && terraform apply -auto-approve'
                         }
-                        dir('iac/ansible') {
+                        dir('deploy/iac/ansible') {
                             sh '''
                                 KUBECONFIG=${KUBECONFIG} \
                                 USE_GKE_GCLOUD_AUTH_PLUGIN=True \
@@ -193,7 +193,7 @@ pipeline {
                             -u "${GHCR_USERNAME}" --password-stdin
 
                         docker build \
-                            -f docker/Dockerfile.backend \
+                            -f deploy/docker/Dockerfile.backend \
                             -t ${FULL_IMAGE}:${GIT_SHA_SHORT} \
                             -t ${FULL_IMAGE}:latest \
                             --build-arg GIT_SHA=${GIT_SHA_SHORT} \

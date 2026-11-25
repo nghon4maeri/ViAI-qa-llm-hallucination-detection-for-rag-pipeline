@@ -43,7 +43,7 @@
 ### ADR-003: Model Integration via In-Process Evaluation Adapter
 - **Status**: Accepted
 - **Context**:
-  The legacy inference pipeline in [`backend/model/inference_model.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/model/inference_model.py) is 342 lines of tightly coupled code that loads PhoBERT, DeBERTa, underthesea NER, and Qwen 1.5B directly on CPU. We need to isolate this logic without rewriting the underlying ML models.
+  The legacy inference pipeline in [`backend/app/inference/inference_model.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/inference/inference_model.py) is 342 lines of tightly coupled code that loads PhoBERT, DeBERTa, underthesea NER, and Qwen 1.5B directly on CPU. We need to isolate this logic without rewriting the underlying ML models.
 - **Decision**:
   Implement the **Adapter Pattern** (`ExistingPipelineAdapter` implementing `EvaluationEngine` protocol). In Sprint 1, the adapter runs in-process, offloading CPU-heavy forward passes to Starlette's worker threadpool (`run_in_threadpool`). In parallel, provide a `MockEngine` for instant CI testing without model weights.
 - **Alternatives Considered**:
@@ -119,7 +119,7 @@
 
 The following 8 questions cannot be answered by source code inspection alone and materially impact product decisions:
 
-1. **Deployment Target for MVP**: Will the initial MVP be deployed to a **single Linux VPS / Cloud VM (Docker Compose)** or straight to the **GKE Kubernetes cluster** configured in `iac/terraform`? *(Recommendation: Single VPS with Docker Compose for faster validation).*
+1. **Deployment Target for MVP**: Will the initial MVP be deployed to a **single Linux VPS / Cloud VM (Docker Compose)** or straight to the **GKE Kubernetes cluster** configured in `deploy/iac/terraform`? *(Recommendation: Single VPS with Docker Compose for faster validation).*
 2. **Model Serving Acceleration**: Is a **GPU (NVIDIA T4 / A10G)** available for production serving, or must the system remain optimized for **CPU-only inference**?
 3. **Data Retention Policy**: How long should completed audit records (contexts, questions, responses) be retained in the database? Is there a regulatory requirement to purge or anonymize sensitive context texts after a certain retention window?
 4. **User Authentication Model**: For the MVP, is a simple **API Key + Project Model** sufficient, or do you require individual **User Registration / Password Login (OAuth2 / JWT)** in Sprint 1? *(Recommendation: API Key + Projects in Sprint 1, full User Auth in Sprint 2).*

@@ -67,12 +67,12 @@ def check_local_files():
     required_files = [
         "dvc.yaml",
         "dvc.lock",
-        "notebooks/embed_phobert.py",
-        "notebooks/train-model-vihallu.py",
-        "notebooks/infer-model-vihallu.py",
-        "scripts/auto_promote_registry.py",
+        "ml/pipelines/embed.py",
+        "ml/pipelines/train.py",
+        "ml/pipelines/infer.py",
+        "ml/pipelines/promote.py",
         "scripts/pull_model_from_registry.py",
-        "backend/model/mlflow_loader.py",
+        "backend/app/inference/mlflow_loader.py",
         "data/vihallu-dataset/vihallu-train.csv",
         "data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv",
     ]
@@ -88,6 +88,7 @@ def check_local_files():
         "models/feature_schema.json",
         "models/metadata.yaml",
         "models/lgbm/fold_0.txt",
+        "models/lgbm/embedding_centroid.npy",
     ]
     print("  Optional (produced by DVC stages):")
     for path in optional_files:
@@ -157,14 +158,14 @@ def check_model_registry(full: bool = False):
         client.get_registered_model(model_name)
         ok("registered model exists", model_name)
     except MlflowException:
-        warn("registered model", f"'{model_name}' not registered yet — run auto_promote_registry.py")
+        warn("registered model", f"'{model_name}' not registered yet — run ml/pipelines/promote.py")
         return
 
     try:
         mv = client.get_model_version_by_alias(model_name, model_alias)
         ok(f"alias '{model_alias}'", f"→ v{mv.version}  run_id={mv.run_id[:8]}...")
     except MlflowException:
-        fail(f"alias '{model_alias}'", f"not set — run auto_promote_registry.py")
+        fail(f"alias '{model_alias}'", f"not set — run ml/pipelines/promote.py")
         return
 
     if full:

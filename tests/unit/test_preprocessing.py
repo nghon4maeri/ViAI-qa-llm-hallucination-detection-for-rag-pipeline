@@ -1,5 +1,5 @@
 # tests/unit/test_preprocessing.py
-from backend.utils.preprocessing import clean_text, format_input_for_model
+from backend.app.utils.preprocessing import clean_text, format_input_for_model
 
 
 def test_clean_text_basic():

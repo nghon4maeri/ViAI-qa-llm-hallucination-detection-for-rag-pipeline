@@ -23,16 +23,16 @@ The following matrix specifies the exact modifications, refactoring, and new fil
 | [`backend/app/models/api_key.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/models/api_key.py) | None | **CREATE** | SQLAlchemy model for `api_keys` table with SHA-256 hash storage. | `base.py`, `project.py` |
 | [`backend/app/evaluation/interfaces.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/evaluation/interfaces.py) | None | **CREATE** | `EvaluationEngine` protocol decoupling business logic from PyTorch/LightGBM. | Python `typing.Protocol` |
 | [`backend/app/evaluation/schemas.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/evaluation/schemas.py) | None | **CREATE** | Typed schemas for `EvaluationInput`, `EvaluationResult`, and `EvaluationBreakdown`. | `pydantic` |
-| [`backend/app/evaluation/adapters/existing_pipeline.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/evaluation/adapters/existing_pipeline.py) | None | **CREATE** | Adapter implementing `EvaluationEngine`, wrapping legacy `HallucinationPipeline`. | [`inference_model.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/model/inference_model.py) |
+| [`backend/app/evaluation/adapters/existing_pipeline.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/evaluation/adapters/existing_pipeline.py) | None | **CREATE** | Adapter implementing `EvaluationEngine`, wrapping legacy `HallucinationPipeline`. | [`inference_model.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/inference/inference_model.py) |
 | [`backend/app/evaluation/adapters/mock_engine.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/evaluation/adapters/mock_engine.py) | None | **CREATE** | Deterministic mock engine for zero-weight CI unit tests and development without models. | `interfaces.py` |
 | [`backend/app/modules/audits/schemas.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/modules/audits/schemas.py) | None | **CREATE** | Pydantic request/response schemas for `/api/v1/audits` (validation rules, lengths). | `pydantic` |
 | [`backend/app/modules/audits/repository.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/modules/audits/repository.py) | None | **CREATE** | Data access layer for `audit_runs`: create record, update result, paginate history. | `database.py`, `audit.py` |
 | [`backend/app/modules/audits/service.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/modules/audits/service.py) | None | **CREATE** | Business orchestrator: create PROCESSING record $\rightarrow$ evaluate $\rightarrow$ update COMPLETED. | `repository.py`, `interfaces.py` |
 | [`backend/app/modules/audits/router.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/modules/audits/router.py) | None | **CREATE** | FastAPI endpoints: `POST /`, `GET /`, `GET /{id}`. | `service.py`, `schemas.py` |
 | [`backend/app/modules/projects/router.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/modules/projects/router.py) | None | **CREATE** | FastAPI endpoints for listing and creating projects. | `database.py`, `project.py` |
-| [`backend/routers/predict.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/routers/predict.py) | Active | **REFACTOR** | Maintain legacy `/api/predict` as a backward-compatible wrapper calling `AuditService`. | `AuditService` |
-| [`backend/model/mlflow_loader.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/model/mlflow_loader.py) | Active | **DEPRECATE** | Add deprecation notice; decouple from active API execution. | None |
-| [`backend/utils/logger.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/utils/logger.py) | Active | **DEPRECATE** | Mark deprecated; use unified `backend/app/core/logging.py`. | None |
+| [`backend/app/modules/legacy/router.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/modules/legacy/router.py) | Active | **REFACTOR** | Maintain legacy `/api/predict` as a backward-compatible wrapper calling `AuditService`. | `AuditService` |
+| [`backend/app/inference/mlflow_loader.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/inference/mlflow_loader.py) | Active | **DEPRECATE** | Add deprecation notice; decouple from active API execution. | None |
+| [`backend/app/utils/logger.py`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/backend/app/utils/logger.py) | Active | **DEPRECATE** | Mark deprecated; use unified `backend/app/core/logging.py`. | None |
 | [`requirements-serving.txt`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/requirements-serving.txt) | Active | **MODIFY** | Add `sqlalchemy>=2.0.0`, `alembic>=1.13.0`, `psycopg2-binary>=2.9.9`, `pydantic-settings>=2.0.0`. | Pip |
 | [`requirements-ci.txt`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/requirements-ci.txt) | Active | **MODIFY** | Add `sqlalchemy>=2.0.0`, `alembic>=1.13.0`, `psycopg2-binary>=2.9.9`, `pydantic-settings>=2.0.0`. | Pip |
 | [`alembic.ini`](file:///home/nguyen-nam/User/nghonamjiwoo/vietnamese-llm-hallucination-detection/alembic.ini) | None | **CREATE** | Alembic migration configuration. | Alembic |
@@ -71,7 +71,7 @@ The following matrix specifies the exact modifications, refactoring, and new fil
            db.close()
    ```
 2. **PostgreSQL Database Initialization**:
-   - In `docker-compose.yml`, configure an init script `docker/init-db.sh` that executes:
+   - In `docker-compose.yml`, configure an init script `deploy/docker/init-db.sh` that executes:
      ```sql
      CREATE DATABASE viai_qa;
      GRANT ALL PRIVILEGES ON DATABASE viai_qa TO "user";
@@ -131,7 +131,7 @@ class AuditRunModel(Base):
 import time
 from backend.app.evaluation.interfaces import EvaluationEngine
 from backend.app.evaluation.schemas import EvaluationInput, EvaluationResult, EvaluationBreakdown
-from backend.model.inference_model import get_hallu_model
+from backend.app.inference.inference_model import get_hallu_model
 
 class ExistingPipelineAdapter(EvaluationEngine):
     """Encapsulates legacy HallucinationPipeline behind the domain interface."""

@@ -1,0 +1,6 @@
+# deploy/k8s/charts/hallucination-model/Chart.yaml
+apiVersion: v2
+name: hallucination-model
+description: KServe InferenceService for hallucination model
+type: application
+version: 0.1.0

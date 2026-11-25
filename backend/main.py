@@ -15,7 +15,7 @@ from backend.app.modules.audits.router import router as audits_router
 from backend.app.modules.batches.router import router as batches_router
 from backend.app.modules.api_keys.router import router as api_keys_router
 from backend.app.modules.monitoring.router import router as monitoring_router
-from backend.routers.predict import router as legacy_predict_router
+from backend.app.modules.legacy.router import router as legacy_predict_router
 
 # OpenTelemetry Tracing Setup
 try:

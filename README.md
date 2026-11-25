@@ -27,7 +27,7 @@
 
 ## System Architecture
 
-![System](imgs/overview.png)
+![System](docs/images/overview.png)
 ---
 ## Production Deployment Status
 
@@ -47,7 +47,7 @@ The system has been successfully deployed to Google Cloud production infrastruct
 
 MLflow uses a managed PostgreSQL instance hosted on **Google Cloud SQL**.
 
-![Cloud-SQL](imgs/cloud-sql.png)
+![Cloud-SQL](docs/images/cloud-sql.png)
 
 | Property | Value |
 |--------|------|
@@ -158,11 +158,11 @@ Extrinsic hallucinations indicate content generation beyond the provided evidenc
 
 To effectively detect and classify hallucinations, this project proposes a **multi-stage, multi-feature hybrid architecture** that integrates complementary linguistic, semantic, and reasoning-based signals. All extracted features are fused into a unified feature space (~778 dimensions) and fed into a **LightGBM ensemble model** trained with stratified cross-validation.
 
-![Model Design](imgs/model-design.png)
+![Model Design](docs/images/model-design.png)
 
 ### Training Pipeline
 
-![Training](imgs/training-pipeline.png)
+![Training](docs/images/training-pipeline.png)
 ### Feature Groups
 
 **1. Fine-tuned Qwen2.5-1.5B Embeddings**
@@ -222,7 +222,7 @@ Pre-computed prediction probabilities from Qwen2.5 acting as an LLM-based zero-s
 
 ### Training Strategy
 
-![Training Strategy](imgs/training-strategy.png)
+![Training Strategy](docs/images/training-strategy.png)
 
 - **Objective**: Multi-class classification with softmax
 
@@ -234,10 +234,10 @@ Pre-computed prediction probabilities from Qwen2.5 acting as an LLM-based zero-s
 
 | Metric | Score |
 |--------|-------|
-| OOF Macro F1 | **0.8638** |
+| OOF Macro F1 | **0.8634** (v2.1, masked-mean embeddings; v2 was 0.8638) |
 | Evaluation dataset | ViHallu |
 | Model registry name | `vihallu-detector` |
-| Model version | v2 |
+| Model version | v2.1 |
 | Production alias | `production` |
 
 ### Contributions
@@ -256,75 +256,45 @@ This system contributes:
 ```
 vietnamese-llm-hallucination-detection/
 │
-├── backend/                        # FastAPI application
-│   ├── model/
-│   │   └── inference_model.py      # Ensemble model loader
-│   ├── routers/
-│   │   └── predict.py              # Prediction endpoint
-│   ├── schemas/                    # Pydantic models
-│   └── utils/
-│       └── preprocessing.py        # Feature extraction
+├── backend/                        # FastAPI application (package `backend`)
+│   ├── main.py                     # App entry, routers, tracing, /health, /metrics
+│   ├── alembic/                    # DB migrations (001 schema, 002 batches, 003 RAG fields)
+│   └── app/
+│       ├── core/                   # Settings, DB session, logging, Prometheus metrics
+│       ├── models/                 # SQLAlchemy ORM (projects, audit_runs, batches, feedback, api_keys)
+│       ├── evaluation/             # EvaluationEngine protocol, adapters, cache, RAG evaluator (rag.py)
+│       ├── inference/              # HallucinationPipeline, MLflow loader, KServe transformer
+│       ├── modules/                # audits, batches, projects, api_keys, monitoring, legacy (/api/predict)
+│       └── utils/                  # Text preprocessing, logger
+│
+├── ml/                             # Everything DVC runs
+│   ├── pipelines/                  # embed.py → train.py → infer.py → promote.py
+│   └── notebooks/                  # EDA and training notebooks
 │
 ├── data/                           # DVC-tracked datasets
-│   ├── raw/
-│   └── processed/
+├── features/                       # DVC output: PhoBERT embeddings
+├── models/                         # DVC output: lgbm/ fold models + centroid, schema, metadata
 │
-├── docker/                         # Dockerfiles
-│   ├── Dockerfile.backend
-│   ├── Dockerfile.ci
-│   ├── Dockerfile.jenkins
-│   └── Dockerfile.nginx
+├── deploy/
+│   ├── docker/                     # Dockerfiles (backend, ci, frontend, jenkins, nginx), init-db.sh
+│   ├── nginx/                      # API gateway config + API keys
+│   ├── mlflow/                     # MLflow tracking server image
+│   ├── k8s/                        # Helm charts, helmfile, values, KServe InferenceService, runtimes
+│   ├── iac/                        # Terraform (GKE, Cloud SQL) + Ansible playbooks
+│   └── ci/                         # Local-only CI credentials (git-ignored)
 │
-├── frontend/                       # User Interface
+├── observability/                  # Prometheus, Grafana, Loki, Jaeger, Evidently drift service
+├── frontend/                       # SvelteKit UI
+├── scripts/                        # Ops scripts (pull model, resolve storage URI, verify pipeline)
+├── tests/                          # unit/ + integration/ (incl. train/serve feature parity)
+├── docs/                           # PRD, architecture, ADRs, sprint/phase reports, images/
 │
-├── iac/                            # Infrastructure as Code
-│   ├── ansible/
-│   │   └── setup_gke_stack.yaml    # KServe + observability stack
-│   └── terraform/
-│       └── gke/                    # GKE cluster provisioning
-│           ├── main.tf
-│           └── terraform.tfvars.example
-│
-├── kubernetes/                     # K8s manifests
-│   ├── charts/
-│   │   └── hallucination-backend/  # Helm chart
-│   ├── runtimes/
-│   │   └── mlflow-cluster-runtime.yaml  # KServe ClusterServingRuntime
-│   ├── secrets.yaml
-│   └── values/
-│       └── backend-prod.yaml
-│
-├── mlops/
-│   ├── dvc/                        # DVC pipeline stages
-│   ├── kserve/
-│   │   └── inference-service.yaml  # KServe InferenceService
-│   └── mlflow/                     # MLflow tracking server config
-│
-├── models/                         # Local model files (gitignored)
-│   └── lgbm/                       # LightGBM fold models
-│
-├── notebooks/                      # Experiment notebooks
-│
-├── observability/                  # Monitoring configs
-│   ├── grafana/
-│   ├── loki/
-│   └── prometheus/
-│
-├── scripts/                        # Utility scripts
-│   ├── pull_model_from_registry.py
-│   ├── resolve_storage_uri.py
-│   └── auto_promote_registry.py
-│
-├── tests/
-│   └── unit/                       # Unit tests (coverage > 80%)
-│
-├── .github/
-│   └── workflows/
-│       └── ci.yml                  # GitHub Actions CI pipeline
-│
-├── Jenkinsfile                     # Jenkins CD pipeline
+├── mlops/mlflow_data.dvc           # Old local MLflow store, now DVC-tracked
+├── Jenkinsfile                     # Jenkins CD pipeline (root: Jenkins default)
 ├── docker-compose.yml              # Local development stack
-└── dvc.yaml                        # DVC pipeline definition
+├── dvc.yaml                        # DVC pipeline definition
+├── pyproject.toml                  # Project metadata + pytest config
+└── Makefile                        # make test / test-ml / run / migrate / pipeline / up
 ```
 
 ---
@@ -356,7 +326,7 @@ cd vietnamese-llm-hallucination-detection
 
 **Setup environment:**
 ```bash
-cp iac/terraform/gke/terraform.tfvars.example iac/terraform/gke/terraform.tfvars
+cp deploy/iac/terraform/gke/terraform.tfvars.example deploy/iac/terraform/gke/terraform.tfvars
 # Fill in required values
 ```
 
@@ -375,14 +345,14 @@ curl http://localhost:5000/health # response: OK
 MLflow UI at `http://localhost:5000`:
 
 MLflow Experiment:
-![MLflow-experiment](imgs/mlflow-experiments.png)
+![MLflow-experiment](docs/images/mlflow-experiments.png)
 
 MLflow Model registry
-![MLflow-model-registry](imgs/mlflow-registry.png)
+![MLflow-model-registry](docs/images/mlflow-registry.png)
 
 MinIO UI at `http://localhost:9001` (minioadmin / minioadmin):
 
-![Minio](imgs/minio-buckets.png)
+![Minio](docs/images/minio-buckets.png)
 
 **Start backend:**
 ```bash
@@ -390,7 +360,7 @@ docker compose up -d backend
 # Backend available at http://localhost:8080
 ```
 FastAPI UI:
-![FastAPI](imgs/backend.png)
+![FastAPI](docs/images/backend.png)
 
 **Start observability stack:**
 ```bash
@@ -401,16 +371,16 @@ docker compose up -d prometheus grafana loki promtail jaeger
 ```
 
 Grafana — prediction distribution dashboard:
-![Grafana](imgs/grafana-dashboards.png)
+![Grafana](docs/images/grafana-dashboards.png)
 
 Prometheus — scrape targets all UP:
-![Prometheus](imgs/prometheus-targets.png)
+![Prometheus](docs/images/prometheus-targets.png)
 
 Loki — backend log explorer:
-![Loki](imgs/grafana-loki.png)
+![Loki](docs/images/grafana-loki.png)
 
 Jaeger — distributed trace for /api/predict:
-![Jaeger](imgs/jaeger-trace.png)
+![Jaeger](docs/images/jaeger-trace.png)
 
 **Start NGINX API Gateway:**
 ```bash
@@ -431,7 +401,7 @@ gcloud config set project vihallu-llm-detect
 
 **Provision GKE cluster:**
 ```bash
-cd iac/terraform/gke
+cd deploy/iac/terraform/gke
 cp terraform.tfvars.example terraform.tfvars
 # Fill in project_id, region, zone
 
@@ -441,7 +411,7 @@ terraform apply
 ```
 
 GCP Console — GKE cluster vihallu-cluster, 2 nodes Ready:
-![GCP](imgs/gke-cluster.png)
+![GCP](docs/images/gke-cluster.png)
 
 **Connect to cluster:**
 ```bash
@@ -452,7 +422,7 @@ gcloud container clusters get-credentials vihallu-cluster \
 
 **Deploy KServe + Observability stack:**
 ```bash
-cd iac/ansible
+cd deploy/iac/ansible
 ansible-playbook setup_gke_stack.yaml -v
 ```
 
@@ -465,41 +435,41 @@ gsutil iam ch allUsers:objectViewer gs://vihallu-models
 ```
 
 GCS Console — vihallu-models/hallucination-detector/model/: 
-![GCS](imgs/gcs-bucket.png)
+![GCS](docs/images/gcs-bucket.png)
 
 **Deploy InferenceService:**
 ```bash
-kubectl apply -f kubernetes/runtimes/mlflow-cluster-runtime.yaml
-kubectl apply -f mlops/kserve/inference-service.yaml
+kubectl apply -f deploy/k8s/runtimes/mlflow-cluster-runtime.yaml
+kubectl apply -f deploy/k8s/kserve/inference-service.yaml
 kubectl get inferenceservice -n hallucination-prod
 ```
 
 Kserve READY:
-![Kserve](imgs/kserve-ready.png)
+![Kserve](docs/images/kserve-ready.png)
 
 **Deploy Backend via Helm:**
 ```bash
-kubectl apply -f kubernetes/secrets.yaml
+kubectl apply -f deploy/k8s/secrets.yaml
 
 helm upgrade --install hallucination-backend \
-  kubernetes/charts/hallucination-backend \
+  deploy/k8s/charts/hallucination-backend \
   --namespace hallucination-prod \
-  -f kubernetes/values/backend-prod.yaml \
+  -f deploy/k8s/values/backend-prod.yaml \
   --wait --timeout=10m
 ```
 
 All pods 2/2 Running:
-![pods](imgs/pods-running.png)
+![pods](docs/images/pods-running.png)
 
 ---
 
 ### 3. CI/CD Pipeline
 
 **GitHub Actions CI** triggers on push to `feature*` and `main`:
-![CI](imgs/ci-pipeline.png)
+![CI](docs/images/ci-pipeline.png)
 
 **Jenkins CD** (triggered by GitHub Actions on merge to `main`):
-![CD](imgs/cd-pipeline.png)
+![CD](docs/images/cd-pipeline.png)
 
 **Setup Jenkins:**
 ```bash
@@ -510,10 +480,10 @@ docker exec hallucination-jenkins \
 ```
 
 GitHub Actions — CI pipeline passed:
-![Github](imgs/github-actions.png)
+![Github](docs/images/github-actions.png)
 
 Jenkins — CD pipeline all stages green:
-![Jenkins](imgs/jenkins-pipeline.png)
+![Jenkins](docs/images/jenkins-pipeline.png)
 
 **Required Jenkins credentials:**
 
@@ -566,24 +536,29 @@ dvc repro
 preprocess -> feature_extraction -> train_folds -> evaluate -> register_model
 ```
 DVC dag — pipeline dependency graph:
-![DVC](imgs/dvc-dag.png)
+![DVC](docs/images/dvc-dag.png)
 
 MLflow — experiment runs comparing fold metrics:
-![MLflow](imgs/mlflow-metric.png)
+![MLflow](docs/images/mlflow-metric.png)
 
 **Model performance (OOF):**
-- F1 Score: **0.8638**
+- F1 Score: **0.8634** (v2.1; see [Phase 0 report](docs/PHASE_0_FOUNDATION_FIX_REPORT.md))
 
-- Model: `vihallu-detector` v2
+- Model: `vihallu-detector` v2.1
 - Alias: `production`
+
+**Check train/serve feature parity and the OOF score** (needs `dvc pull`):
+```bash
+make test-ml
+```
 
 **Promote model to production:**
 ```bash
-python scripts/auto_promote_registry.py
+python ml/pipelines/promote.py
 ```
 
 MLflow model registry — production alias set on v2:
-![MLflow](imgs/mlflow-registry.png)
+![MLflow](docs/images/mlflow-registry.png)
 
 ---
 
@@ -619,6 +594,18 @@ curl -X POST http://localhost:8080/api/predict \
 
 - `extrinsic` — Model introduces information not present in the context
 - `none` — No hallucination detected
+
+**Evaluate a RAG turn** (every answer sentence is checked against every retrieved chunk):
+```bash
+curl -X POST http://localhost:8080/api/v1/audits/rag \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Thủ đô của Việt Nam là gì?",
+    "contexts": ["Hà Nội là thủ đô của Việt Nam.", "Việt Nam nằm ở Đông Nam Á."],
+    "answer": "Thủ đô của Việt Nam là Hà Nội. Tổng thống Việt Nam sống ở đó."
+  }'
+```
+The response is a normal audit record plus `faithfulness` (share of supported sentences), `contexts`, and `claims[]` (per-sentence `label`, `confidence`, `context_index`, NLI/NER `breakdown`). RAG audits appear in `GET /api/v1/audits` and accept feedback like any other audit.
 
 **KServe endpoint (GKE):**
 ```bash
