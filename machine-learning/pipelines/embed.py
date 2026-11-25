@@ -15,7 +15,7 @@ PHOBERT_TOKENIZER = os.getenv("PHOBERT_TOKENIZER", PHOBERT_MODEL)
 DEVICE = "cpu"
 BATCH_SIZE = 8
 
-DATA_PATH = "data/vihallu-dataset/vihallu-train.csv"
+DATA_PATH = "data/raw/vihallu/vihallu-train.csv"
 OUT_DIR = "artifacts/features"
 OUT_FILE = f"{OUT_DIR}/phobert_embeddings.npy"
 

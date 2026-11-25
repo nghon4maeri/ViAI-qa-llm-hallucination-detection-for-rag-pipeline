@@ -3,4 +3,4 @@ outs:
   size: 23042113
   nfiles: 3
   hash: md5
-  path: vimedaqa-dataset
+  path: vimedaqa

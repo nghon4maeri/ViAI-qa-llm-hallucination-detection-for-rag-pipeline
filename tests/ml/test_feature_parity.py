@@ -15,8 +15,8 @@ import pytest
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 REQUIRED = [
     "artifacts/features/phobert_embeddings.npy",
-    "data/vihallu-dataset/vihallu-train.csv",
-    "data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv",
+    "data/raw/vihallu/vihallu-train.csv",
+    "data/raw/vihallu-vistral/vistral_train_predictions_with_probs.csv",
     "artifacts/models/lgbm/embedding_centroid.npy",
     "artifacts/models/feature_schema.json",
     "artifacts/models/metadata.yaml",
@@ -87,7 +87,7 @@ def test_oof_macro_f1_reproduces_training(train, pipeline):
 def test_serving_features_match_training(train, pipeline):
     _, X, _, contexts, prompts, responses = train
     vistral = pd.read_csv(
-        os.path.join(ROOT, "data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv")
+        os.path.join(ROOT, "data/raw/vihallu-vistral/vistral_train_predictions_with_probs.csv")
     )[["prob_no", "prob_extrinsic", "prob_intrinsic"]].values
 
     for i in range(0, len(X), 700):  # 10 rows spread over the train set

@@ -20,8 +20,8 @@ import vihallu_features as vf  # noqa: E402
 
 
 EMB_PATH            = "artifacts/features/phobert_embeddings.npy"
-VISTRAL_PATH        = "data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv"
-DATA_PATH           = "data/vihallu-dataset/vihallu-train.csv"
+VISTRAL_PATH        = "data/raw/vihallu-vistral/vistral_train_predictions_with_probs.csv"
+DATA_PATH           = "data/raw/vihallu/vihallu-train.csv"
 MODEL_DIR           = Path("artifacts/models/lgbm")
 FEATURE_SCHEMA_PATH = "artifacts/models/feature_schema.json"
 OUT_PATH            = "artifacts/predictions/vihallu_infer_predictions.csv"

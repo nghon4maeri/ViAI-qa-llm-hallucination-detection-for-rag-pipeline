@@ -52,7 +52,7 @@ def get_git_commit() -> str:
 
 
 def load_dataset():
-    df = pd.read_csv("data/vihallu-dataset/vihallu-train.csv")
+    df = pd.read_csv("data/raw/vihallu/vihallu-train.csv")
     df["label"] = df["label"].str.lower().str.strip()
     labels = df["label"].map(LABEL_MAP).values
 
@@ -71,7 +71,7 @@ def load_phobert_embeddings() -> np.ndarray:
 
 def load_vistral_feats() -> np.ndarray:
     df = pd.read_csv(
-        "data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv"
+        "data/raw/vihallu-vistral/vistral_train_predictions_with_probs.csv"
     )
     return df[vf.LLM_PROB_COLUMNS].values
 

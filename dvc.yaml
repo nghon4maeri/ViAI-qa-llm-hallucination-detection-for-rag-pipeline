@@ -4,15 +4,15 @@ stages:
     cmd: python machine-learning/pipelines/build_medical_hallu.py
     deps:
       - machine-learning/pipelines/build_medical_hallu.py
-      - data/vimedaqa-dataset
+      - data/raw/vimedaqa
     outs:
-      - data/vimedhallu-dataset
+      - data/processed/vimedhallu
 
   embed:
     cmd: python machine-learning/pipelines/embed.py
     deps:
       - machine-learning/pipelines/embed.py
-      - data/vihallu-dataset/vihallu-train.csv
+      - data/raw/vihallu/vihallu-train.csv
     outs:
       - artifacts/features/phobert_embeddings.npy
 
@@ -21,8 +21,8 @@ stages:
     deps:
       - machine-learning/pipelines/train.py
       - artifacts/features/phobert_embeddings.npy
-      - data/vihallu-dataset/vihallu-train.csv
-      - data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv
+      - data/raw/vihallu/vihallu-train.csv
+      - data/raw/vihallu-vistral/vistral_train_predictions_with_probs.csv
     outs:
       - artifacts/models/lgbm
       - artifacts/models/metadata.yaml
@@ -33,8 +33,8 @@ stages:
     deps:
       - machine-learning/pipelines/infer.py
       - artifacts/features/phobert_embeddings.npy
-      - data/vihallu-dataset/vihallu-train.csv
-      - data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv
+      - data/raw/vihallu/vihallu-train.csv
+      - data/raw/vihallu-vistral/vistral_train_predictions_with_probs.csv
       - artifacts/models/lgbm
       - artifacts/models/feature_schema.json
     outs:
@@ -46,7 +46,7 @@ stages:
     deps:
       - machine-learning/pipelines/export_feedback.py
     outs:
-      - data/feedback/feedback-export.csv
+      - data/processed/feedback/feedback-export.csv
     always_changed: true
 
   promote:

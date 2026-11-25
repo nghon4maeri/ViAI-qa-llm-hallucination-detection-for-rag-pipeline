@@ -72,8 +72,8 @@ def check_local_files():
         "machine-learning/pipelines/infer.py",
         "machine-learning/pipelines/promote.py",
         "scripts/pull_model_from_registry.py",
-        "data/vihallu-dataset/vihallu-train.csv",
-        "data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv",
+        "data/raw/vihallu/vihallu-train.csv",
+        "data/raw/vihallu-vistral/vistral_train_predictions_with_probs.csv",
     ]
 
     for path in required_files:

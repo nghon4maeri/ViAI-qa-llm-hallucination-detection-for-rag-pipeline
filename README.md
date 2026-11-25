@@ -281,7 +281,9 @@ vietnamese-llm-hallucination-detection/
 │   ├── scripts/                    #   model registry ops: pull, resolve storage URI, verify pipeline
 │   └── notebooks/                  #   EDA and research notebooks
 │
-├── data/                           # DVC-tracked datasets (ViHallu, ViMedAQA, ViMedHallu)
+├── data/                           # Inputs, DVC-tracked
+│   ├── raw/                        #   downloaded, not reproducible: ViHallu (+ private, Vistral probs), ViMedAQA
+│   └── processed/                  #   built by DVC stages: ViMedHallu, ViMedHallu-hard, reviewer feedback
 ├── artifacts/                      # DVC outputs and local-only files
 │   ├── models/                     #   LightGBM folds + centroid, feature schema, PhoBERT copy
 │   ├── features/  predictions/     #   embeddings, inference outputs

@@ -106,6 +106,8 @@ Each phase is one commit (or PR). The full test suite and `svelte-check` must pa
 
 ### R3 Folder moves ✅ (done before R2, at the user's request)
 
+> **Data split (after R2):** `data/` stays at the root because several components read it and it holds inputs, not outputs. It is split into `raw/` (downloaded, `dvc add`: `vihallu`, `vihallu-private`, `vihallu-vistral`, `vimedaqa`) and `processed/` (DVC stage outputs: `vimedhallu`, `vimedhallu-hard`, `feedback`). The `-dataset` suffixes were dropped. Every raw `.dvc` pointer reports up to date, and re-running `build_medical` from the new path reproduces the locked output hash.
+
 > **Renamed afterwards (user's choice of descriptive names):** `services/` → `applications/`, `ml/` → `machine-learning/`, `sdk/` → `client-sdk/`, `deploy/` → `infrastructure/`. The paths in this plan use the names from the time each step was written. `machine-learning/` is not an importable Python name, so code loads pipeline modules by path (the tests already did); `auto_promote.py` adds `pipelines/` to `sys.path`, and the R2 shared package will be imported the same way.
 
 **Done:**

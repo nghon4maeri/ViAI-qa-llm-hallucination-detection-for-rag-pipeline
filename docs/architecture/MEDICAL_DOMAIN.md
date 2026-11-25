@@ -22,7 +22,7 @@
 
 ## ViMedHallu (built here)
 
-`machine-learning/pipelines/build_medical_hallu.py` is a DVC stage (`build_medical`). It reads `data/vimedaqa-dataset/` and writes `data/vimedhallu-dataset/vimedhallu-{train,validation,test}.csv` in the ViHallu format, plus `topic`, `corruption` and `source_url` columns.
+`machine-learning/pipelines/build_medical_hallu.py` is a DVC stage (`build_medical`). It reads `data/raw/vimedaqa/` and writes `data/processed/vimedhallu/vimedhallu-{train,validation,test}.csv` in the ViHallu format, plus `topic`, `corruption` and `source_url` columns.
 
 | Label | How it is made | Share |
 |---|---|---|
@@ -58,7 +58,7 @@ LLM probabilities are cached in `features/<data>_llm_probs.csv` so fine-tuning c
 
 ## Harder data (Phase 4)
 
-`machine-learning/pipelines/generate_hard_medical.py` writes `data/vimedhallu-hard/vimedhallu-hard-{split}.csv`: Claude-written intrinsic/extrinsic rewrites (Batch API, Haiku 5.5) plus balanced gold rows. Report on it separately from the rule-based split, and only after a manual spot check (`reviewed` column). Reviewer feedback exports through `machine-learning/pipelines/export_feedback.py`.
+`machine-learning/pipelines/generate_hard_medical.py` writes `data/processed/vimedhallu-hard/vimedhallu-hard-{split}.csv`: Claude-written intrinsic/extrinsic rewrites (Batch API, Haiku 5.5) plus balanced gold rows. Report on it separately from the rule-based split, and only after a manual spot check (`reviewed` column). Reviewer feedback exports through `machine-learning/pipelines/export_feedback.py`.
 
 ## Next steps
 

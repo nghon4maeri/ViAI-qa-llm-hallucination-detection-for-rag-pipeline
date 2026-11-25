@@ -7,7 +7,7 @@ Reviewer feedback (audit_feedback) -> labelled rows in the ViHallu format, for t
 
 RAG audits export as one row with the chunks joined as context (the same columns audit_runs stores),
 labelled with the reviewer's verdict for the whole answer.
-Output: data/feedback/feedback-export.csv
+Output: data/processed/feedback/feedback-export.csv
 """
 
 import os
@@ -19,7 +19,7 @@ import pandas as pd
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path[:0] = [ROOT, os.path.join(ROOT, "applications", "api")]  # repo root and the `backend` package
 
-OUT_PATH = "data/feedback/feedback-export.csv"
+OUT_PATH = "data/processed/feedback/feedback-export.csv"
 LABELS = {"no", "intrinsic", "extrinsic"}
 # Older UI builds stored these values
 LEGACY = {"no_hallucination": "no"}

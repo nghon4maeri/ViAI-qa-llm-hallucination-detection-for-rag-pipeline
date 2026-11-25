@@ -30,7 +30,7 @@ The v2 model is backed up in `models/_pre_phase0/` (local only, git-ignored).
 
 ## 2. Known gaps (not fixed in Phase 0)
 
-- **LLM probability features come from different models.** Training used precomputed Vistral probabilities (`data/vihallu-vistral-dataset/`), while the live server computes them with Qwen2.5-1.5B and its own prompt, so these 3 features shift at serving time. Fix: regenerate the training probabilities with the serving model (several CPU hours) or serve Vistral.
+- **LLM probability features come from different models.** Training used precomputed Vistral probabilities (`data/raw/vihallu-vistral/`), while the live server computes them with Qwen2.5-1.5B and its own prompt, so these 3 features shift at serving time. Fix: regenerate the training probabilities with the serving model (several CPU hours) or serve Vistral.
 - **Long contexts push the response out of the embedding.** Input is `context prompt response` truncated to 256 tokens, and 63% of training rows hit that limit. The embedding often never sees the response. Candidate fix: embed the response separately (Phase 1/2 experiment).
 - **No labelled holdout.** `vihallu-test.csv` has no labels, so OOF is the only score available.
 - **Model downloads.** Pulling DeBERTa-large and Qwen from HuggingFace is slow on the current network. Bake the weights into the image or a volume. `machine-learning/pipelines/embed.py` already accepts `PHOBERT_MODEL` / `PHOBERT_TOKENIZER` to use local copies.

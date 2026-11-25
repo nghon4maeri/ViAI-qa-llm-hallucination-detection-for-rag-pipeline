@@ -10,7 +10,7 @@ in the ViHallu format (id, context, prompt, response, label) - "ViMedHallu".
 
 Rule-based so labels are exact and the build is reproducible. LLM-written corruptions
 (more natural, harder) are added later by the Phase 2 agent.
-Outputs: data/vimedhallu-dataset/vimedhallu-{train,validation,test}.csv
+Outputs: data/processed/vimedhallu/vimedhallu-{train,validation,test}.csv
 """
 
 import os
@@ -20,8 +20,8 @@ from typing import Callable, List, Optional
 
 import pandas as pd
 
-SRC_DIR = "data/vimedaqa-dataset"
-OUT_DIR = "data/vimedhallu-dataset"
+SRC_DIR = "data/raw/vimedaqa"
+OUT_DIR = "data/processed/vimedhallu"
 SPLITS = ["train", "validation", "test"]
 SEED = 42
 TOPICS = {0: "body-part", 1: "disease", 2: "drug", 3: "medicine"}

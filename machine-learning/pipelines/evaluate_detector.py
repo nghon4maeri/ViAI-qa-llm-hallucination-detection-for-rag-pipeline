@@ -8,7 +8,7 @@ Uses HallucinationPipeline's own feature code, so the number is what production 
 LLM probabilities are cached next to the features (one Qwen forward pass per row is the slow part)
 so fine-tuning can reuse them.
 
-  python machine-learning/pipelines/evaluate_detector.py --data data/vimedhallu-dataset/vimedhallu-test.csv \
+  python machine-learning/pipelines/evaluate_detector.py --data data/processed/vimedhallu/vimedhallu-test.csv \
       --limit 600 --out reports/medical_baseline.json
 """
 

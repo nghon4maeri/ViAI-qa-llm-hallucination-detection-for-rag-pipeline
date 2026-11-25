@@ -12,7 +12,7 @@ Uses the Message Batches API (50% cheaper, async; most batches finish within an 
 
 Needs ANTHROPIC_API_KEY. Cost-first defaults: claude-haiku-5-5, effort low
 (~600 rows ≈ $0.06 at batch prices; check usage in the Console after the first run).
-Output: data/vimedhallu-hard/vimedhallu-hard-{split}.csv (ViHallu format + generator metadata).
+Output: data/processed/vimedhallu-hard/vimedhallu-hard-{split}.csv (ViHallu format + generator metadata).
 """
 
 import argparse
@@ -22,8 +22,8 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-SRC_DIR = "data/vimedaqa-dataset"
-OUT_DIR = "data/vimedhallu-hard"
+SRC_DIR = "data/raw/vimedaqa"
+OUT_DIR = "data/processed/vimedhallu-hard"
 MODEL = os.getenv("GENERATOR_MODEL", "claude-haiku-5-5")
 EFFORT = os.getenv("GENERATOR_EFFORT", "low")
 SEED = 42

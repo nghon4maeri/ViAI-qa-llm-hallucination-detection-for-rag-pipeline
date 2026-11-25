@@ -148,7 +148,7 @@ Haiku 5.5 has no server-side refusal fallback, so the `fallbacks` parameter is s
   - Grounded gold rows from the same passages keep the split balanced.
   - Uses the **Message Batches API** (50% cheaper) + `claude-haiku-5-5`, effort `low`, and a structured JSON output. About 600 rows ≈ **$0.06**.
   - Rejects rewrites that are empty, unchanged, the wrong length, or truncated. Rows carry `generator`, `change` and `reviewed=false`, so the split is spot-checked before any number is reported on it.
-- **Feedback export** `machine-learning/pipelines/export_feedback.py` (DVC stage `export_feedback`, needs `DATABASE_URL`) writes reviewed audits → `data/feedback/feedback-export.csv` in the ViHallu format.
+- **Feedback export** `machine-learning/pipelines/export_feedback.py` (DVC stage `export_feedback`, needs `DATABASE_URL`) writes reviewed audits → `data/processed/feedback/feedback-export.csv` in the ViHallu format.
   - Labels are normalised: `CORRECT` → the audit's label, legacy `no_hallucination` → `no`.
   - `model_label` is kept so the rows where the reviewer overruled the model can be weighted or inspected.
 - Tests: `tests/ml/test_flywheel.py` (9): a fake Batch API returning results in shuffled order, label normalisation, and export from the test database.
