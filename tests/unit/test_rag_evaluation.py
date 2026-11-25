@@ -116,3 +116,21 @@ def test_relevance_is_none_without_embeddings():
     res = evaluate_rag(NoEmbed(), RagEvaluationInput(question="q", contexts=["c"], answer="a b c"))
     assert res.metrics.answer_relevance is None
     assert res.metrics.context_relevance is None
+
+
+@pytest.mark.parametrize("answer, action", [
+    ("Thủ đô của Việt Nam là Hà Nội.", "pass"),
+    ("Thủ đô của Việt Nam là Hà Nội. Tổng thống Việt Nam sống ở đó.", "regenerate"),
+    ("Thủ đô của Việt Nam là Paris. Tổng thống sống ở đó.", "block"),
+])
+def test_guard_endpoint_policy(client, answer, action):
+    res = client.post("/api/v1/audits/rag/guard", json={
+        "question": "Thủ đô Việt Nam là gì?", "contexts": [CONTEXTS[0]], "answer": answer,
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["action"] == action
+    assert all(c["label"] != "no" for c in data["failing_claims"])
+    assert (len(data["failing_claims"]) == 0) == (action == "pass")
+    # Every guard call leaves an audit for review
+    assert client.get(f"/api/v1/audits/{data['audit_id']}").status_code == 200

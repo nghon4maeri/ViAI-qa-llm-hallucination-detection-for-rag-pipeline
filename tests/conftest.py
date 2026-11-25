@@ -39,6 +39,8 @@ from backend.app.evaluation.interfaces import EvaluationEngine
 from backend.app.evaluation.schemas import EvaluationInput
 from backend.app.evaluation.adapters.mock_engine import MockEngine
 from backend.app.modules.audits.router import get_engine
+from backend.app.modules.batches.router import get_batch_service
+from backend.app.modules.batches.service import BatchService
 from backend.main import app
 
 # Shared test in-memory SQLite engine
@@ -79,6 +81,10 @@ def test_mock_engine():
 def client(db_session, test_mock_engine):
     app.dependency_overrides[get_db] = lambda: db_session
     app.dependency_overrides[get_engine] = lambda: test_mock_engine
+    # The batch worker opens its own session in production; in tests it must share the test connection
+    app.dependency_overrides[get_batch_service] = lambda: BatchService(
+        db_session, test_mock_engine, session_factory=lambda: TestingSessionLocal(bind=db_session.bind)
+    )
 
     # Backward compatibility mock for legacy /api/predict router
     mock_legacy_pipeline = MagicMock()

@@ -10,6 +10,7 @@ from backend.app.modules.audits.repository import AuditRepository
 from backend.app.modules.audits.schemas import (
     AuditCreateRequest,
     RagAuditCreateRequest,
+    GuardResponse,
     AuditResponse,
     AuditSummary,
     AuditListResponse,
@@ -25,6 +26,19 @@ from backend.app.evaluation.schemas import ClaimVerdict, RagEvaluationInput
 from backend.app.core.config import settings
 from backend.app.core.logging import logger
 from backend.app.core.metrics import record_evaluation_metric, record_feedback_metric
+
+
+def guard_decision(claims: List[ClaimVerdict]) -> Tuple[str, str]:
+    """
+    Medical policy: a contradiction of the sources (wrong dose, flipped advice) is blocked outright;
+    unsupported additions can be fixed by regenerating with the same sources.
+    """
+    labels = {c.label for c in claims}
+    if "intrinsic" in labels:
+        return "block", "Câu trả lời mâu thuẫn với tài liệu nguồn"
+    if "extrinsic" in labels:
+        return "regenerate", "Câu trả lời có thông tin không nằm trong tài liệu nguồn"
+    return "pass", "Mọi câu đều có tài liệu đỡ"
 
 
 class AuditService:
@@ -68,6 +82,18 @@ class AuditService:
             ground_truth=request.ground_truth
         )
         return await self._run_audit(audit, lambda: self._evaluate_rag(request))
+
+    async def guard(self, request: RagAuditCreateRequest, trace_id: Optional[str] = None) -> GuardResponse:
+        audit = await self.execute_rag_audit(request, trace_id=trace_id)
+        claims = audit.claims or []
+        action, reason = guard_decision(claims)
+        return GuardResponse(
+            action=action,
+            reason=reason,
+            faithfulness=audit.faithfulness or 0.0,
+            failing_claims=[c for c in claims if c.label != "no"],
+            audit_id=audit.id,
+        )
 
     def _evaluate_single(self, request: AuditCreateRequest) -> dict:
         # Step 3: Check In-Memory LRU Cache first (< 0.5ms on hit)

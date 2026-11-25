@@ -175,17 +175,20 @@ class AuditRepository:
 
         stmt = select(AuditFeedbackModel).where(AuditFeedbackModel.audit_run_id == audit_id)
         feedback = self.db.execute(stmt).scalar_one_or_none()
+        # "CORRECT" confirms the model, so the true label is the audit's own; keeps feedback usable for retraining
+        if not corrected_label:
+            corrected_label = audit.label if feedback_label.upper() == "CORRECT" else feedback_label
 
         if feedback:
             feedback.feedback_label = feedback_label
-            feedback.corrected_label = corrected_label or feedback_label
+            feedback.corrected_label = corrected_label
             feedback.comment = comment
             feedback.updated_at = datetime.now(timezone.utc)
         else:
             feedback = AuditFeedbackModel(
                 audit_run_id=audit_id,
                 feedback_label=feedback_label,
-                corrected_label=corrected_label or feedback_label,
+                corrected_label=corrected_label,
                 comment=comment,
             )
             self.db.add(feedback)

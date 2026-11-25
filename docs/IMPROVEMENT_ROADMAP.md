@@ -1,6 +1,6 @@
 # ViAI-QA Improvement Roadmap: RAG Evaluation & Guardrail Platform
 
-**Status:** Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Medical dataset built; the baseline is blocked on downloading the Qwen weights (see [MEDICAL_DOMAIN.md](MEDICAL_DOMAIN.md)). Phase 5 first pass done.
+**Status:** Phases 0, 1, 2, 3 and 5 (first pass) done. Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Medical dataset built; the baseline is blocked on downloading the Qwen weights (see [MEDICAL_DOMAIN.md](MEDICAL_DOMAIN.md)). Phase 5 first pass done.
 
 ## Domain focus
 
@@ -122,7 +122,20 @@ Haiku 5.5 has no server-side refusal fallback, so the `fallbacks` parameter is s
 - Pluggable provider: hosted API or local Qwen via vLLM/Ollama.
 - Benchmark Tier 1 alone vs Tier 1 + agent (F1, cost, latency) and log to MLflow.
 
-### Phase 3: MCP server and SDK
+### Phase 3: MCP server and SDK ✅
+
+**Done (2026-11-25):**
+- **Online guardrail** `POST /api/v1/audits/rag/guard` returns `pass` / `regenerate` / `block` plus the failing claims and `audit_id`. Every call is stored for review. Medical policy: any contradiction (intrinsic) → `block`; any unsupported addition (extrinsic) → `regenerate`. It lives under `/audits` instead of the planned `/rag/guard`.
+- **Python SDK** `sdk/python/viai_qa` (depends only on `requests`): `guard`, `evaluate`, `evaluate_single`, `judge`, `get_audit`, `list_audits`, `feedback`, `upload_dataset`, `wait_for_batch`.
+- **MCP server** `viai-qa-mcp` (stdio, `mcp` 2.x `MCPServer`) with 7 tools: `guard_rag_answer`, `evaluate_rag_response`, `get_audit`, `deep_audit`, `evaluate_dataset`, `list_failing_claims`, `submit_feedback`. Read-only/idempotent annotations are set and results are trimmed for agent context. Checked end to end over stdio JSON-RPC (`initialize` + `tools/list`). See `sdk/python/README.md`.
+- **Fixes found along the way:**
+  - `CORRECT` feedback stored the string "CORRECT" as `corrected_label`, so the row was unusable for retraining. It now stores the audit's own label.
+  - On current FastAPI/Starlette (0.165 / 1.10, what `fastapi>=0.111` installs today), `TestClient` runs background tasks and surfaces their errors. The batch worker used the real `SessionLocal` in tests; the test fixture now gives it the test connection.
+- Tests: `tests/integration/test_sdk_mcp.py` (7). Full suite: 98 passed.
+
+**Not done:** LangChain/LlamaIndex callbacks. They are a few lines on top of `ViaiQA.guard`/`evaluate` and are left for when a demo pipeline needs them (Phase 6).
+
+**Original plan:**
 - MCP server `viai-qa-mcp`: `evaluate_rag_response`, `evaluate_dataset`, `get_audit`, `submit_feedback`, `list_failing_claims`.
 - Thin Python SDK plus LangChain/LlamaIndex callback, on top of the REST API and API keys.
 - Online guardrail `POST /api/v1/rag/guard` → `pass / block / regenerate`.

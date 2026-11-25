@@ -14,6 +14,7 @@ from backend.app.modules.audits.service import AuditService
 from backend.app.modules.audits.schemas import (
     AuditCreateRequest,
     RagAuditCreateRequest,
+    GuardResponse,
     AuditResponse,
     AuditListResponse,
     FeedbackCreateRequest,
@@ -73,6 +74,23 @@ async def create_rag_audit(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"RAG audit evaluation failed: {str(exc)}"
+        )
+
+
+@router.post("/rag/guard", response_model=GuardResponse)
+async def guard_rag_answer(
+    request: RagAuditCreateRequest,
+    req: Request,
+    service: AuditService = Depends(get_audit_service)
+):
+    """Online guardrail: call before showing a RAG answer. Returns pass / regenerate / block, and stores the audit."""
+    trace_id = getattr(req.state, "trace_id", None) if hasattr(req, "state") else None
+    try:
+        return await service.guard(request, trace_id=trace_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Guard evaluation failed: {str(exc)}"
         )
 
 

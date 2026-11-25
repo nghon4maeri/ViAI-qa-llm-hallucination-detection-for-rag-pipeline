@@ -612,6 +612,14 @@ The response is a normal audit record plus:
 
 RAG audits appear in `GET /api/v1/audits` and accept feedback like any other audit.
 
+**Online guardrail for a RAG pipeline** (call before showing the answer):
+```bash
+curl -X POST http://localhost:8080/api/v1/audits/rag/guard -H "Content-Type: application/json" \
+  -d '{"question": "...", "contexts": ["..."], "answer": "..."}'
+# {"action": "pass" | "regenerate" | "block", "reason": "...", "failing_claims": [...], "audit_id": "..."}
+```
+A Python SDK and an MCP server for Claude Code / Cursor / other agents live in [`sdk/python`](sdk/python/README.md).
+
 **Deep audit with the Claude judge agent** (Tier 2; needs `ANTHROPIC_API_KEY`):
 ```bash
 curl -X POST "http://localhost:8080/api/v1/audits/<audit_id>/judge?only_doubtful=true"

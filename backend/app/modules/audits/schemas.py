@@ -17,6 +17,15 @@ class RagAuditCreateRequest(RagEvaluationInput):
     project_id: Optional[uuid.UUID] = Field(None, description="Target project ID; defaults to default workspace if omitted")
 
 
+class GuardResponse(BaseModel):
+    """Online guardrail decision for a RAG answer before it reaches the user."""
+    action: str = Field(..., description="pass | regenerate | block")
+    reason: str
+    faithfulness: float
+    failing_claims: List[ClaimVerdict] = Field(default_factory=list, description="Claims that are not grounded")
+    audit_id: uuid.UUID = Field(..., description="Persisted audit for review and feedback")
+
+
 class FeedbackCreateRequest(BaseModel):
     feedback_label: str = Field(..., description="User rating or label: CORRECT, INCORRECT, no_hallucination, intrinsic, extrinsic")
     corrected_label: Optional[str] = Field(None, description="Optional corrected label")
