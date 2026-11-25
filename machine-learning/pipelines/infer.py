@@ -1,4 +1,4 @@
-# ml/pipelines/infer.py
+# machine-learning/pipelines/infer.py
 """
 infer.py
 Run inference on train split, save predictions + log to MLflow.

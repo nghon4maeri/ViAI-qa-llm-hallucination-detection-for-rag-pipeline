@@ -1,4 +1,4 @@
-# deploy/k8s/charts/hallucination-backend/Chart.yaml
+# infrastructure/k8s/charts/hallucination-backend/Chart.yaml
 apiVersion: v2
 name: hallucination-backend
 description: FastAPI backend for hallucination detection

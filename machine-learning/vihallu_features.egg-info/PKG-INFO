@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: vihallu-features
+Version: 1.0.0
+Summary: The single feature builder for the ViHallu LightGBM detector (training, batch inference, API, KServe)
+Requires-Python: >=3.10
+Requires-Dist: numpy
+Requires-Dist: scikit-learn

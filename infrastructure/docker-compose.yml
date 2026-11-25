@@ -1,4 +1,4 @@
-# Run from the repo root: docker compose -f deploy/docker-compose.yml up -d (or make up)
+# Run from the repo root: docker compose -f infrastructure/docker-compose.yml up -d (or make up)
 # Fixed project name keeps the existing named volumes (Postgres, MinIO, Grafana) after the move to deploy/
 name: vietnamese-llm-hallucination-detection
 
@@ -100,7 +100,7 @@ services:
     container_name: hallucination-backend
     build:
       context: ..
-      dockerfile: deploy/docker/Dockerfile.backend
+      dockerfile: infrastructure/docker/Dockerfile.backend
     environment:
       - DATABASE_URL=postgresql://user:password@db:5432/viai_qa
       - ENABLE_TRACING=false
@@ -116,7 +116,7 @@ services:
       - "8080"
     volumes:
       - ../artifacts/models:/app/models
-      - ../services/api/backend:/app/backend
+      - ../applications/api/backend:/app/backend
       - ../artifacts/predictions:/app/predictions
       - ~/.cache/huggingface:/root/.cache/huggingface
     depends_on:
@@ -129,15 +129,15 @@ services:
     container_name: hallucination-frontend
     build:
       context: ..
-      dockerfile: deploy/docker/Dockerfile.frontend.dev
+      dockerfile: infrastructure/docker/Dockerfile.frontend.dev
     ports:
       - "5173:5173"
     volumes:
-      - ../services/web:/app
+      - ../applications/web:/app
       - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost
-      - VITE_API_KEY=vihallu-dev-key-local  # local gateway dev key (deploy/nginx/api_keys.conf)
+      - VITE_API_KEY=vihallu-dev-key-local  # local gateway dev key (infrastructure/nginx/api_keys.conf)
     depends_on:
       - backend
     networks:
@@ -274,7 +274,7 @@ services:
     container_name: hallucination-ci
     build:
       context: ..
-      dockerfile: deploy/docker/Dockerfile.ci
+      dockerfile: infrastructure/docker/Dockerfile.ci
     profiles: ["ci"]
     environment:
       - DISABLE_MODEL=true
@@ -294,7 +294,7 @@ services:
   jenkins:
     build:
       context: ..
-      dockerfile: deploy/docker/Dockerfile.jenkins
+      dockerfile: infrastructure/docker/Dockerfile.jenkins
     container_name: hallucination-jenkins
     profiles: ["ci"]
     user: root
@@ -316,7 +316,7 @@ services:
   nginx-gateway:
     build:
       context: ..
-      dockerfile: deploy/docker/Dockerfile.nginx
+      dockerfile: infrastructure/docker/Dockerfile.nginx
     container_name: hallucination-nginx
     ports:
       - "80:80"

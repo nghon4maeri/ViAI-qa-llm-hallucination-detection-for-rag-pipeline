@@ -1,4 +1,4 @@
-# ml/pipelines/evaluate_detector.py
+# machine-learning/pipelines/evaluate_detector.py
 """
 evaluate_detector.py
 Score the serving LightGBM path on any labelled ViHallu-format CSV
@@ -8,7 +8,7 @@ Uses HallucinationPipeline's own feature code, so the number is what production 
 LLM probabilities are cached next to the features (one Qwen forward pass per row is the slow part)
 so fine-tuning can reuse them.
 
-  python ml/pipelines/evaluate_detector.py --data data/vimedhallu-dataset/vimedhallu-test.csv \
+  python machine-learning/pipelines/evaluate_detector.py --data data/vimedhallu-dataset/vimedhallu-test.csv \
       --limit 600 --out reports/medical_baseline.json
 """
 
@@ -22,7 +22,7 @@ import pandas as pd
 from sklearn.metrics import classification_report, f1_score
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path[:0] = [ROOT, os.path.join(ROOT, "services", "api")]  # ml/ and the `backend` package
+sys.path[:0] = [ROOT, os.path.join(ROOT, "applications", "api")]  # repo root and the `backend` package
 
 LABELS = ["extrinsic", "no", "intrinsic"]  # class ids 0, 1, 2 (artifacts/models/feature_schema.json)
 

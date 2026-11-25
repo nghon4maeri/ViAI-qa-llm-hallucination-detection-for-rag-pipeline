@@ -1,4 +1,4 @@
-# deploy/iac/terraform/gke/cloud_sql.tf
+# infrastructure/iac/terraform/gke/cloud_sql.tf
 
 resource "google_sql_database_instance" "mlflow_postgres" {
   name                = "mlflow-postgres-${var.project_id}"

@@ -1,4 +1,4 @@
-# deploy/k8s/values/backend-prod.yaml
+# infrastructure/k8s/values/backend-prod.yaml
 replicaCount: 2
 
 image:

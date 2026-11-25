@@ -1,4 +1,4 @@
-# deploy/observability/evidently/values.yaml
+# infrastructure/observability/evidently/values.yaml
 # Custom deployment for Evidently drift service
 # Deployed as a simple K8s Deployment + Service
 

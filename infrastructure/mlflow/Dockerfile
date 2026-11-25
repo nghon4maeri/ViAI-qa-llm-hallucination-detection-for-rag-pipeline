@@ -1,4 +1,4 @@
-# deploy/mlflow/Dockerfile
+# infrastructure/mlflow/Dockerfile
 FROM python:3.9-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

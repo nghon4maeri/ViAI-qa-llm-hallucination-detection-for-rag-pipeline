@@ -3,8 +3,8 @@
 Client for the ViAI-QA API, which checks Vietnamese medical RAG answers sentence by sentence against the retrieved documents. The package also ships an MCP server so agents can call it directly.
 
 ```bash
-pip install ./sdk/python            # SDK only (depends on requests)
-pip install "./sdk/python[mcp]"     # + MCP server (mcp>=1.2, tested on 2.3)
+pip install ./client-sdk/python            # SDK only (depends on requests)
+pip install "./client-sdk/python[mcp]"     # + MCP server (mcp>=1.2, tested on 2.3)
 ```
 
 Configuration comes from the environment, or from the constructor arguments:

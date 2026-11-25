@@ -1,4 +1,4 @@
-# deploy/observability/grafana/provisioning/datasources/datasources.yaml
+# infrastructure/observability/grafana/provisioning/datasources/datasources.yaml
 # Used when deploying via docker-compose (local dev)
 # For K8s, datasources are configured in grafana/values.yaml
 

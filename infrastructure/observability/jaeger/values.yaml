@@ -1,4 +1,4 @@
-# deploy/observability/jaeger/values.yaml
+# infrastructure/observability/jaeger/values.yaml
 # Helm chart: jaegertracing/jaeger
 # helm repo add jaegertracing https://jaegertracing.github.io/helm-charts
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# deploy/docker/init-db.sh
+# infrastructure/docker/init-db.sh
 # Multi-database initializer for PostgreSQL container (used on initial volume boot)
 set -e
 

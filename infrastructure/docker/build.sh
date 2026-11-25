@@ -1,6 +1,6 @@
-# deploy/docker/build.sh
+# infrastructure/docker/build.sh
 #!/bin/sh
-# deploy/mlflow/entrypoint.sh
+# infrastructure/mlflow/entrypoint.sh
 
 set -e
 

@@ -1,4 +1,4 @@
-# deploy/k8s/values/platform-prod.yaml
+# infrastructure/k8s/values/platform-prod.yaml
 aws:
   region: ap-southeast-1
   secretName: aws-credentials

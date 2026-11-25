@@ -1,4 +1,4 @@
-# deploy/iac/terraform/main.tf
+# infrastructure/iac/terraform/main.tf
 terraform {
   required_providers {
     kubernetes = {

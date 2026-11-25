@@ -1,4 +1,4 @@
-# deploy/k8s/ingress-auth.yaml
+# infrastructure/k8s/ingress-auth.yaml
 # NGINX Ingress Controller với API Key auth
 # Requires: ingress-nginx controller installed
 

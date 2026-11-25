@@ -1,4 +1,4 @@
-# deploy/observability/prometheus/values.yaml
+# infrastructure/observability/prometheus/values.yaml
 # Helm chart: kube-prometheus-stack
 # helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 

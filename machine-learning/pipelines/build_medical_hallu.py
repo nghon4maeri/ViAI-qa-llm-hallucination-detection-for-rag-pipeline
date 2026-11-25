@@ -1,4 +1,4 @@
-# ml/pipelines/build_medical_hallu.py
+# machine-learning/pipelines/build_medical_hallu.py
 """
 build_medical_hallu.py
 Turn ViMedAQA (context, question, answer) into a labelled medical hallucination set

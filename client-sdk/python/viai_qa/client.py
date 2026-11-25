@@ -1,4 +1,4 @@
-# sdk/python/viai_qa/client.py
+# client-sdk/python/viai_qa/client.py
 """Thin client over the ViAI-QA REST API. Responses are the API's JSON, returned as dicts."""
 import os
 import time

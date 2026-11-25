@@ -1,4 +1,4 @@
-# ml/pipelines/promote.py
+# machine-learning/pipelines/promote.py
 import os
 import time
 import mlflow
@@ -94,7 +94,7 @@ def promote_to_production(client: MlflowClient, model_name: str, run) -> str:
         name=model_name,
         version=version,
         key="promoted_by",
-        value="ml/pipelines/promote.py",
+        value="machine-learning/pipelines/promote.py",
     )
     client.set_model_version_tag(
         name=model_name,

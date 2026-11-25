@@ -1,4 +1,4 @@
-# deploy/k8s/charts/hallucination-backend/templates/hpa.yaml
+# infrastructure/k8s/charts/hallucination-backend/templates/hpa.yaml
 {{- if .Values.autoscaling.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

@@ -1,4 +1,4 @@
-# deploy/observability/grafana/values.yaml
+# infrastructure/observability/grafana/values.yaml
 # Helm chart: grafana/grafana
 # helm repo add grafana https://grafana.github.io/helm-charts
 

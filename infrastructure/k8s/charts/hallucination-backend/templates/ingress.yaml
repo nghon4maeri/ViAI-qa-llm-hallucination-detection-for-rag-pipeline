@@ -1,4 +1,4 @@
-# deploy/k8s/charts/hallucination-backend/templates/ingress.yaml
+# infrastructure/k8s/charts/hallucination-backend/templates/ingress.yaml
 {{- if .Values.ingress.enabled -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress

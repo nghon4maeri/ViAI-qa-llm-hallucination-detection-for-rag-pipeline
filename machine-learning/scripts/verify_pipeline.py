@@ -1,4 +1,4 @@
-# ml/scripts/verify_pipeline.py
+# machine-learning/scripts/verify_pipeline.py
 """
 scripts/verify_pipeline.py
 Smoke-test the full MLflow + DVC pipeline without running full training.
@@ -67,10 +67,10 @@ def check_local_files():
     required_files = [
         "dvc.yaml",
         "dvc.lock",
-        "ml/pipelines/embed.py",
-        "ml/pipelines/train.py",
-        "ml/pipelines/infer.py",
-        "ml/pipelines/promote.py",
+        "machine-learning/pipelines/embed.py",
+        "machine-learning/pipelines/train.py",
+        "machine-learning/pipelines/infer.py",
+        "machine-learning/pipelines/promote.py",
         "scripts/pull_model_from_registry.py",
         "data/vihallu-dataset/vihallu-train.csv",
         "data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv",
@@ -157,14 +157,14 @@ def check_model_registry(full: bool = False):
         client.get_registered_model(model_name)
         ok("registered model exists", model_name)
     except MlflowException:
-        warn("registered model", f"'{model_name}' not registered yet — run ml/pipelines/promote.py")
+        warn("registered model", f"'{model_name}' not registered yet — run machine-learning/pipelines/promote.py")
         return
 
     try:
         mv = client.get_model_version_by_alias(model_name, model_alias)
         ok(f"alias '{model_alias}'", f"→ v{mv.version}  run_id={mv.run_id[:8]}...")
     except MlflowException:
-        fail(f"alias '{model_alias}'", f"not set — run ml/pipelines/promote.py")
+        fail(f"alias '{model_alias}'", f"not set — run machine-learning/pipelines/promote.py")
         return
 
     if full:

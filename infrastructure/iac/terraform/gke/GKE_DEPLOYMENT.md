@@ -67,7 +67,7 @@ export GOOGLE_APPLICATION_CREDENTIALS=~/gcp-terraform-key.json
 
 ## Step 3 — Provision GKE with Terraform
 ```bash
-cd deploy/iac/terraform/gke
+cd infrastructure/iac/terraform/gke
 
 # Edit variables
 # - project_id
@@ -92,7 +92,7 @@ kubectl get nodes
 
 ## Step 4 — Deploy KServe and Observability Stack
 ```bash
-cd deploy/iac/ansible
+cd infrastructure/iac/ansible
 
 # Run Ansible playbook
 ansible-playbook setup_gke_stack.yaml -v

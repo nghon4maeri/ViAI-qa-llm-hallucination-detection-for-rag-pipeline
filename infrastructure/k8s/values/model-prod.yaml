@@ -1,4 +1,4 @@
-# deploy/k8s/values/model-prod.yaml
+# infrastructure/k8s/values/model-prod.yaml
 model:
   name: hallucination-detector
   namespace: hallucination-prod

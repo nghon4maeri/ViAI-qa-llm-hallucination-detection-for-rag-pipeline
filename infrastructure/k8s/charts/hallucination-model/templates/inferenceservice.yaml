@@ -1,4 +1,4 @@
-# deploy/k8s/charts/hallucination-model/templates/inferenceservice.yaml
+# infrastructure/k8s/charts/hallucination-model/templates/inferenceservice.yaml
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:

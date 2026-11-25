@@ -1,4 +1,4 @@
-# deploy/k8s/namespace.yaml
+# infrastructure/k8s/namespace.yaml
 apiVersion: v1
 kind: Namespace
 metadata:

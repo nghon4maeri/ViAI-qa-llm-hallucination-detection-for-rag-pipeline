@@ -1,5 +1,5 @@
 """
-deploy/observability/evidently/drift_service.py
+infrastructure/observability/evidently/drift_service.py
 Evidently data drift service with:
   - Prometheus metrics export (/metrics endpoint)
   - Scheduled drift checks (configurable interval)

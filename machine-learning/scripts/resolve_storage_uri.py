@@ -4,11 +4,11 @@ Resolve the correct S3 storageUri for the production model from MLflow Registry.
 Called by CI/CD before 'kubectl apply' or 'helmfile sync'.
 
 Usage:
-    python ml/scripts/resolve_storage_uri.py
+    python machine-learning/scripts/resolve_storage_uri.py
     # Outputs: s3://vihallu-mlflow/artifacts/1/<run_id>/artifacts/model
     
     # Or update inference-service.yaml directly:
-    python ml/scripts/resolve_storage_uri.py --update-yaml deploy/k8s/kserve/inference-service.yaml
+    python machine-learning/scripts/resolve_storage_uri.py --update-yaml infrastructure/k8s/kserve/inference-service.yaml
 """
 
 import os

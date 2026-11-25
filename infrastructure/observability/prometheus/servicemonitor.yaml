@@ -1,4 +1,4 @@
-# deploy/observability/prometheus/servicemonitor.yaml
+# infrastructure/observability/prometheus/servicemonitor.yaml
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:

@@ -223,7 +223,7 @@
 
     - name: Resolve MLflow model storageUri
       ansible.builtin.command:
-        cmd: python ../../../ml/scripts/resolve_storage_uri.py --update-yaml ../../k8s/kserve/inference-service.yaml
+        cmd: python ../../../machine-learning/scripts/resolve_storage_uri.py --update-yaml ../../k8s/kserve/inference-service.yaml
       environment:
         MLFLOW_TRACKING_URI: "http://mlflow.hallucination-prod.svc.cluster.local:5000"
         MLFLOW_S3_ENDPOINT_URL: "http://minio.hallucination-prod.svc.cluster.local:9000"

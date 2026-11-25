@@ -1,4 +1,4 @@
-# ml/pipelines/generate_hard_medical.py
+# machine-learning/pipelines/generate_hard_medical.py
 """
 generate_hard_medical.py
 LLM-written hallucinations for ViMedHallu: Claude rewrites a gold ViMedAQA answer so it carries exactly
@@ -7,8 +7,8 @@ build_medical_hallu.py, so they form a separate "hard" split to report on.
 
 Uses the Message Batches API (50% cheaper, async; most batches finish within an hour) in two steps:
 
-  python ml/pipelines/generate_hard_medical.py submit  --split test --n 600
-  python ml/pipelines/generate_hard_medical.py collect --split test
+  python machine-learning/pipelines/generate_hard_medical.py submit  --split test --n 600
+  python machine-learning/pipelines/generate_hard_medical.py collect --split test
 
 Needs ANTHROPIC_API_KEY. Cost-first defaults: claude-haiku-5-5, effort low
 (~600 rows ≈ $0.06 at batch prices; check usage in the Console after the first run).

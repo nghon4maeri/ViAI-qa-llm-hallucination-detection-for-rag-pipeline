@@ -1,4 +1,4 @@
-# deploy/k8s/helmfile.yaml
+# infrastructure/k8s/helmfile.yaml
 # Manages all Helm releases for the hallucination detection MLOps platform
 # Usage:
 #   helmfile sync                    — deploy everything

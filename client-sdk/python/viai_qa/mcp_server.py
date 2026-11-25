@@ -1,4 +1,4 @@
-# sdk/python/viai_qa/mcp_server.py
+# client-sdk/python/viai_qa/mcp_server.py
 """
 MCP server exposing ViAI-QA to agents (Claude Code, Cursor, any MCP client) over stdio.
 

@@ -1,4 +1,4 @@
-# deploy/observability/loki/values.yaml
+# infrastructure/observability/loki/values.yaml
 # Helm chart: grafana/loki-stack
 # helm repo add grafana https://grafana.github.io/helm-charts
 

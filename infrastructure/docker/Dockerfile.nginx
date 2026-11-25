@@ -1,7 +1,7 @@
 FROM nginx:1.25-alpine
 
-COPY deploy/nginx/nginx.conf /etc/nginx/nginx.conf
-COPY deploy/nginx/api_keys.conf /etc/nginx/api_keys.conf
+COPY infrastructure/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY infrastructure/nginx/api_keys.conf /etc/nginx/api_keys.conf
 
 RUN mkdir -p /var/log/nginx
 

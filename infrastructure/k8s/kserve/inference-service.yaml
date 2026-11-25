@@ -1,4 +1,4 @@
-# deploy/k8s/kserve/inference-service.yaml
+# infrastructure/k8s/kserve/inference-service.yaml
 
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService

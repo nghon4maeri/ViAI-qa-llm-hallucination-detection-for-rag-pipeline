@@ -1,4 +1,4 @@
-# deploy/k8s/charts/hallucination-backend/templates/deployment.yaml
+# infrastructure/k8s/charts/hallucination-backend/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:

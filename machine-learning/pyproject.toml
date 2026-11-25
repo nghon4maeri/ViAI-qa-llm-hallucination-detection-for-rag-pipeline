@@ -1,0 +1,13 @@
+[project]
+name = "vihallu-features"
+version = "1.0.0"
+description = "The single feature builder for the ViHallu LightGBM detector (training, batch inference, API, KServe)"
+requires-python = ">=3.10"
+dependencies = ["numpy", "scikit-learn"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["vihallu_features"]

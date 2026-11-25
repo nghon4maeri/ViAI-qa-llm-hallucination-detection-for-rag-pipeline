@@ -1,9 +1,9 @@
-# deploy/k8s/charts/hallucination-model/values.yaml
+# infrastructure/k8s/charts/hallucination-model/values.yaml
 model:
   name: hallucination-detector
   runtime: mlflow-runtime
 
-  # storageUri: resolved by ml/scripts/resolve_storage_uri.py before deploy
+  # storageUri: resolved by machine-learning/scripts/resolve_storage_uri.py before deploy
   # Format: s3://bucket/artifacts/<experiment_id>/<run_id>/artifacts/model
   storageUri: "s3://vihallu-mlflow/artifacts/1"
 

@@ -3,7 +3,7 @@ FROM python:3.10-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DISABLE_MODEL=true
-ENV PYTHONPATH=/app/services/api:/app
+ENV PYTHONPATH=/app/applications/api:/app
 
 WORKDIR /app
 
@@ -15,9 +15,9 @@ COPY requirements/ci.txt requirements-ci.txt
 RUN pip install --no-cache-dir -r requirements-ci.txt
 
 # Same layout as the repo: the API, the ML pipelines and the SDK are all under test
-COPY services/api services/api
-COPY ml ml
-COPY sdk sdk
+COPY applications/api applications/api
+COPY machine-learning machine-learning
+COPY client-sdk client-sdk
 COPY tests tests
 COPY .coveragerc .
 COPY pyproject.toml .

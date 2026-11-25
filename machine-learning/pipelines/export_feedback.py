@@ -1,9 +1,9 @@
-# ml/pipelines/export_feedback.py
+# machine-learning/pipelines/export_feedback.py
 """
 export_feedback.py
 Reviewer feedback (audit_feedback) -> labelled rows in the ViHallu format, for the next training round.
 
-  DATABASE_URL=postgresql://... python ml/pipelines/export_feedback.py
+  DATABASE_URL=postgresql://... python machine-learning/pipelines/export_feedback.py
 
 RAG audits export as one row with the chunks joined as context (the same columns audit_runs stores),
 labelled with the reviewer's verdict for the whole answer.
@@ -17,7 +17,7 @@ from typing import Optional
 import pandas as pd
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path[:0] = [ROOT, os.path.join(ROOT, "services", "api")]  # ml/ and the `backend` package
+sys.path[:0] = [ROOT, os.path.join(ROOT, "applications", "api")]  # repo root and the `backend` package
 
 OUT_PATH = "data/feedback/feedback-export.csv"
 LABELS = {"no", "intrinsic", "extrinsic"}

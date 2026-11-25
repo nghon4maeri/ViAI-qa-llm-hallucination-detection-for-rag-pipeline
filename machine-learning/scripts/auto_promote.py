@@ -1,4 +1,4 @@
-# ml/scripts/auto_promote.py
+# machine-learning/scripts/auto_promote.py
 
 import argparse
 import os

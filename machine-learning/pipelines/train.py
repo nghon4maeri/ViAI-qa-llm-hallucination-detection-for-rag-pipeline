@@ -1,4 +1,4 @@
-# ml/pipelines/train.py
+# machine-learning/pipelines/train.py
 """
 train.py
 Train PhoBERT + LightGBM ensemble for Vietnamese hallucination detection.
