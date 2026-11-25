@@ -1,0 +1,7 @@
+# Never upload local secrets or build leftovers to Vercel
+.env*
+node_modules
+.svelte-kit
+.svelte-kit-old
+build
+.vercel/output
