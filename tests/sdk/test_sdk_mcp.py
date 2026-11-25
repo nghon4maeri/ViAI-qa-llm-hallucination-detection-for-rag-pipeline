@@ -8,7 +8,7 @@ import uuid
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "sdk", "python"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "client-sdk", "python"))
 from viai_qa import ViaiQA, ViaiQAError  # noqa: E402
 
 from backend.app.modules.batches.service import BatchService  # noqa: E402

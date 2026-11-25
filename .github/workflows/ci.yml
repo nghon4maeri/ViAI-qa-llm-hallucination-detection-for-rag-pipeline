@@ -27,7 +27,7 @@ jobs:
       - name: Build CI Docker image
         run: |
           docker build \
-            -f deploy/docker/Dockerfile.ci \
+            -f infrastructure/docker/Dockerfile.ci \
             -t hallucination-ci:${{ github.sha }} .
 
       - name: Run unit & integration tests with coverage
@@ -103,7 +103,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: artifacts/model_store/
-          key: mlflow-model-production-${{ hashFiles('ml/scripts/pull_model_from_registry.py') }}
+          key: mlflow-model-production-${{ hashFiles('machine-learning/scripts/pull_model_from_registry.py') }}
           restore-keys: |
             mlflow-model-production-
 
@@ -126,7 +126,7 @@ jobs:
             "mlflow==2.19.0" \
             "boto3==1.34.69" \
             "protobuf>=3.20,<5"
-          python ml/scripts/pull_model_from_registry.py || {
+          python machine-learning/scripts/pull_model_from_registry.py || {
             echo "[WARN] MLflow download failed, creating empty model_store"
             mkdir -p artifacts/model_store
           }
@@ -147,7 +147,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: deploy/docker/Dockerfile.backend
+          file: infrastructure/docker/Dockerfile.backend
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

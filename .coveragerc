@@ -1,8 +1,8 @@
 [run]
 omit =
     tests/*
-    services/api/backend/app/inference/inference_model.py
-    services/api/backend/app/inference/kserve_adapter.py
+    applications/api/backend/app/inference/inference_model.py
+    applications/api/backend/app/inference/kserve_adapter.py
     
 [report]
 fail_under = 80

@@ -47,21 +47,21 @@ terraform.tfvars
 .DS_Store
 .vercel/
 .vercel
-services/web/.vercel
+applications/web/.vercel
 .svelte-kit-old
 
-deploy/ci/**/secrets*
-deploy/ci/**/credentials*
-deploy/ci/kubeconfig*
+infrastructure/ci/**/secrets*
+infrastructure/ci/**/credentials*
+infrastructure/ci/kubeconfig*
 # Local secrets (TLS, basic-auth, kubeconfig copies); never committed
-deploy/secrets/
+infrastructure/secrets/
 config_flat
 auth-file.venv_mlflow/
 /artifacts/models/*
 !/artifacts/models/.gitignore
 !/artifacts/models/*.dvc
 artifacts/model_store/
-services/api/backend/model_store/
+applications/api/backend/model_store/
 # Local MLflow store, competition results, scratch
 artifacts/local/
 *.pth

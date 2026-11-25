@@ -8,8 +8,8 @@ requires-python = ">=3.10"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# The API package `backend` lives in services/api; ml/ and sdk/ resolve from the repo root
-pythonpath = ["services/api", "."]
+# The API package `backend` lives in applications/api; machine-learning/ and client-sdk/ modules load by path
+pythonpath = ["applications/api", "."]
 markers = [
     "slow: very slow tests (LLMs, transformers, GPU, large models)",
     "integration: full pipeline tests",

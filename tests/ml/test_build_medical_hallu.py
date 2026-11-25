@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-_spec = importlib.util.spec_from_file_location("build_medical_hallu", os.path.join(ROOT, "ml/pipelines/build_medical_hallu.py"))
+_spec = importlib.util.spec_from_file_location("build_medical_hallu", os.path.join(ROOT, "machine-learning/pipelines/build_medical_hallu.py"))
 b = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(b)
 

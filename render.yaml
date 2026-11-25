@@ -8,8 +8,8 @@ services:
     runtime: python
     region: singapore
     plan: starter
-    buildCommand: pip install -r requirements/serving.txt && cd services/api && alembic upgrade head
-    startCommand: cd services/api && uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r requirements/serving.txt && cd applications/api && alembic upgrade head
+    startCommand: cd applications/api && uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -29,7 +29,7 @@ services:
   - type: web
     name: viai-qa-frontend
     runtime: node
-    rootDir: services/web
+    rootDir: applications/web
     region: singapore
     plan: free
     buildCommand: npm install && npm run build

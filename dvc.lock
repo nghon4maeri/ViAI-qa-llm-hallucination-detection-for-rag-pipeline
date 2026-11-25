@@ -1,13 +1,13 @@
 schema: '2.0'
 stages:
   embed:
-    cmd: python ml/pipelines/embed.py
+    cmd: python machine-learning/pipelines/embed.py
     deps:
     - path: data/vihallu-dataset/vihallu-train.csv
       hash: md5
       md5: ade7a7128908af0dc9c5b5f3737d26c9
       size: 10728910
-    - path: ml/pipelines/embed.py
+    - path: machine-learning/pipelines/embed.py
       hash: md5
       md5: 52815dc45e3507ea077b6ad86ee17906
       size: 1705
@@ -17,7 +17,7 @@ stages:
       md5: f661bea84978bc74a914545d051fbf92
       size: 21504128
   train:
-    cmd: python ml/pipelines/train.py
+    cmd: python machine-learning/pipelines/train.py
     deps:
     - path: artifacts/features/phobert_embeddings.npy
       hash: md5
@@ -31,7 +31,7 @@ stages:
       hash: md5
       md5: be999df9d039824af3f5d264f020b6b2
       size: 550556
-    - path: ml/pipelines/train.py
+    - path: machine-learning/pipelines/train.py
       hash: md5
       md5: f1e58ad359ad9ca55c04c048ffb57453
       size: 8814
@@ -50,7 +50,7 @@ stages:
       md5: 0fa15ee5ff2dd7b8b8ed9d458a7cf503
       size: 130
   infer:
-    cmd: python ml/pipelines/infer.py
+    cmd: python machine-learning/pipelines/infer.py
     deps:
     - path: data/vihallu-dataset/vihallu-train.csv
       hash: md5
@@ -73,7 +73,7 @@ stages:
       md5: 3372436968e42b035cafffe537724879.dir
       size: 32920837
       nfiles: 5
-    - path: ml/pipelines/infer.py
+    - path: machine-learning/pipelines/infer.py
       hash: md5
       md5: b9d79f3f9028a4b3fedb5e71850d7b0e
       size: 4258
@@ -83,25 +83,25 @@ stages:
       md5: e38cb734aa207a31d4ba483e32ad5b1a
       size: 754641
   promote:
-    cmd: python ml/pipelines/promote.py
+    cmd: python machine-learning/pipelines/promote.py
     deps:
     - path: artifacts/models/metadata.yaml
       hash: md5
       md5: 68414f93b23c7a86321c401218405fc9
       size: 129
-    - path: ml/pipelines/promote.py
+    - path: machine-learning/pipelines/promote.py
       hash: md5
       md5: 186df838b232afdd914e68770d48fcbd
       size: 4400
   build_medical:
-    cmd: python ml/pipelines/build_medical_hallu.py
+    cmd: python machine-learning/pipelines/build_medical_hallu.py
     deps:
     - path: data/vimedaqa-dataset
       hash: md5
       md5: feffb6af9332f3f9c10950278f21fddc.dir
       size: 23042113
       nfiles: 3
-    - path: ml/pipelines/build_medical_hallu.py
+    - path: machine-learning/pipelines/build_medical_hallu.py
       hash: md5
       md5: ccb8d97483af94050c842c990ff5ab79
       size: 6750

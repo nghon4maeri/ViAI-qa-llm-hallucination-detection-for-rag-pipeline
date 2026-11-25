@@ -1,6 +1,6 @@
 # Refactor Plan: Main Folders, Same Stack and Architecture
 
-**Status:** R1 and R3 done (2026-11-25); R2, R4–R6 not started
+**Status:** R1 and R3 done (2026-11-25), folders renamed; R2, R4–R6 not started
 **Constraint:** keep the tech stack and the architecture in the README: FastAPI + NGINX, PyTorch/HF + LightGBM, MLflow + DVC + MinIO/GCS, KServe/MLServer, Docker/Helm/GKE, Terraform/Ansible, GitHub Actions + Jenkins, Prometheus/Grafana/Loki/Jaeger/Evidently, SvelteKit. Nothing is removed. Code is moved, deduplicated, or wired up to match the design.
 
 ## 1. Why
@@ -93,6 +93,8 @@ Each phase is one commit (or PR). The full test suite and `svelte-check` must pa
 - The API image installs it as a local package. The ML code keeps its own requirements, and the API does not import pipeline scripts.
 
 ### R3 Folder moves ✅ (done before R2, at the user's request)
+
+> **Renamed afterwards (user's choice of descriptive names):** `services/` → `applications/`, `ml/` → `machine-learning/`, `sdk/` → `client-sdk/`, `deploy/` → `infrastructure/`. The paths in this plan use the names from the time each step was written. `machine-learning/` is not an importable Python name, so code loads pipeline modules by path (the tests already did); `auto_promote.py` adds `pipelines/` to `sys.path`, and the R2 shared package will be imported the same way.
 
 **Done:**
 - `backend/` + `alembic.ini` → `services/api/`; `frontend/` → `services/web/`.

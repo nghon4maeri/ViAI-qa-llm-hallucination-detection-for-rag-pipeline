@@ -62,7 +62,7 @@ ensemble, add a regression test. Details in the Phase 0 report.
 
 **Done:**
 - `POST /api/v1/audits/rag` (`question`, `contexts[]`, `answer`). It lives under `/audits` instead of the planned `/rag/evaluate`, so RAG audits reuse history, feedback and metrics unchanged.
-- `services/api/backend/app/evaluation/rag.py`: punctuation-based claim split. Each claim is scored against each chunk by the existing `EvaluationEngine` through `evaluation_cache`. A claim counts as supported if any chunk says `no`; otherwise it takes the verdict of the most related chunk (lowest NLI neutral).
+- `applications/api/backend/app/evaluation/rag.py`: punctuation-based claim split. Each claim is scored against each chunk by the existing `EvaluationEngine` through `evaluation_cache`. A claim counts as supported if any chunk says `no`; otherwise it takes the verdict of the most related chunk (lowest NLI neutral).
 - Overall label: `no` only if every claim is supported, otherwise `intrinsic` takes precedence over `extrinsic`. `faithfulness` = share of supported claims.
 - Migration `003_add_rag_fields`: `audit_runs.contexts`, `claims`, `faithfulness`.
 - `RagMetrics`, stored in `audit_runs.rag_metrics` (`ground_truth` gets its own column):
@@ -84,7 +84,7 @@ Original plan:
 ### Phase 2: LLM judge agent (tool calling) ✅ (built; not yet run against the live API)
 
 **Done (2026-11-25):**
-- `services/api/backend/app/evaluation/judge_agent.py` is the Tier 2 Claude agent. It is a manual tool loop (every call is recorded for the UI and traced with OpenTelemetry when available) and has three tools:
+- `applications/api/backend/app/evaluation/judge_agent.py` is the Tier 2 Claude agent. It is a manual tool loop (every call is recorded for the UI and traced with OpenTelemetry when available) and has three tools:
   - `detect_hallucination(claim, context_index)`: the Tier 1 detector through `evaluation_cache`
   - `check_numbers(claim, context_index)`: dose/duration/percentage comparison, digits inside names ignored
   - `submit_verdict` (strict schema): ends the loop
@@ -126,8 +126,8 @@ Haiku 5.5 has no server-side refusal fallback, so the `fallbacks` parameter is s
 
 **Done (2026-11-25):**
 - **Online guardrail** `POST /api/v1/audits/rag/guard` returns `pass` / `regenerate` / `block` plus the failing claims and `audit_id`. Every call is stored for review. Medical policy: any contradiction (intrinsic) → `block`; any unsupported addition (extrinsic) → `regenerate`. It lives under `/audits` instead of the planned `/rag/guard`.
-- **Python SDK** `sdk/python/viai_qa` (depends only on `requests`): `guard`, `evaluate`, `evaluate_single`, `judge`, `get_audit`, `list_audits`, `feedback`, `upload_dataset`, `wait_for_batch`.
-- **MCP server** `viai-qa-mcp` (stdio, `mcp` 2.x `MCPServer`) with 7 tools: `guard_rag_answer`, `evaluate_rag_response`, `get_audit`, `deep_audit`, `evaluate_dataset`, `list_failing_claims`, `submit_feedback`. Read-only/idempotent annotations are set and results are trimmed for agent context. Checked end to end over stdio JSON-RPC (`initialize` + `tools/list`). See `sdk/python/README.md`.
+- **Python SDK** `client-sdk/python/viai_qa` (depends only on `requests`): `guard`, `evaluate`, `evaluate_single`, `judge`, `get_audit`, `list_audits`, `feedback`, `upload_dataset`, `wait_for_batch`.
+- **MCP server** `viai-qa-mcp` (stdio, `mcp` 2.x `MCPServer`) with 7 tools: `guard_rag_answer`, `evaluate_rag_response`, `get_audit`, `deep_audit`, `evaluate_dataset`, `list_failing_claims`, `submit_feedback`. Read-only/idempotent annotations are set and results are trimmed for agent context. Checked end to end over stdio JSON-RPC (`initialize` + `tools/list`). See `client-sdk/python/README.md`.
 - **Fixes found along the way:**
   - `CORRECT` feedback stored the string "CORRECT" as `corrected_label`, so the row was unusable for retraining. It now stores the audit's own label.
   - On current FastAPI/Starlette (0.165 / 1.10, what `fastapi>=0.111` installs today), `TestClient` runs background tasks and surfaces their errors. The batch worker used the real `SessionLocal` in tests; the test fixture now gives it the test connection.
@@ -143,17 +143,17 @@ Haiku 5.5 has no server-side refusal fallback, so the `fallbacks` parameter is s
 ### Phase 4: Data flywheel ✅ (pipelines built; first real runs need an API key / database)
 
 **Done (2026-11-25):**
-- **LLM hard split** `ml/pipelines/generate_hard_medical.py` (`submit` / `collect`).
+- **LLM hard split** `machine-learning/pipelines/generate_hard_medical.py` (`submit` / `collect`).
   - Claude rewrites a gold ViMedAQA answer so it carries exactly one intrinsic or one extrinsic error, in fluent chatbot Vietnamese. It uses only facts from the passage for intrinsic edits and only additions for extrinsic ones.
   - Grounded gold rows from the same passages keep the split balanced.
   - Uses the **Message Batches API** (50% cheaper) + `claude-haiku-5-5`, effort `low`, and a structured JSON output. About 600 rows ≈ **$0.06**.
   - Rejects rewrites that are empty, unchanged, the wrong length, or truncated. Rows carry `generator`, `change` and `reviewed=false`, so the split is spot-checked before any number is reported on it.
-- **Feedback export** `ml/pipelines/export_feedback.py` (DVC stage `export_feedback`, needs `DATABASE_URL`) writes reviewed audits → `data/feedback/feedback-export.csv` in the ViHallu format.
+- **Feedback export** `machine-learning/pipelines/export_feedback.py` (DVC stage `export_feedback`, needs `DATABASE_URL`) writes reviewed audits → `data/feedback/feedback-export.csv` in the ViHallu format.
   - Labels are normalised: `CORRECT` → the audit's label, legacy `no_hallucination` → `no`.
   - `model_label` is kept so the rows where the reviewer overruled the model can be weighted or inspected.
 - Tests: `tests/ml/test_flywheel.py` (9): a fake Batch API returning results in shuffled order, label normalisation, and export from the test database.
 
-**Closing the loop (blocked, same blocker as the baseline):** `ml/pipelines/train.py` needs PhoBERT embeddings and the 3 LLM `prob_*` features for every training row. ViMedHallu, the hard split and the feedback rows don't have the LLM features yet. `evaluate_detector.py` already computes and caches them (`features/<data>_llm_probs.csv`). Once the Qwen weights are available:
+**Closing the loop (blocked, same blocker as the baseline):** `machine-learning/pipelines/train.py` needs PhoBERT embeddings and the 3 LLM `prob_*` features for every training row. ViMedHallu, the hard split and the feedback rows don't have the LLM features yet. `evaluate_detector.py` already computes and caches them (`features/<data>_llm_probs.csv`). Once the Qwen weights are available:
 1. Run it on each new CSV.
 2. Extend `train.py` to concatenate those sources with ViHallu.
 3. Compare on ViHallu OOF + ViMedHallu test + the hard split before `promote`.

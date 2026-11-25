@@ -29,9 +29,9 @@ wheels/
 .gitattributes
 
 # Frontend dependencies and dev artifacts
-services/web/node_modules/
-services/web/.svelte-kit/
-services/web/build/
+applications/web/node_modules/
+applications/web/.svelte-kit/
+applications/web/build/
 .npm/
 
 # Testing & coverage
@@ -54,4 +54,4 @@ data/
 artifacts/local/
 artifacts/features/
 artifacts/mlflow_data/
-deploy/secrets/
+infrastructure/secrets/

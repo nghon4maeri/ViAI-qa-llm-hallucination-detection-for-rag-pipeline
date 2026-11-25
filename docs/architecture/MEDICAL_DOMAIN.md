@@ -22,7 +22,7 @@
 
 ## ViMedHallu (built here)
 
-`ml/pipelines/build_medical_hallu.py` is a DVC stage (`build_medical`). It reads `data/vimedaqa-dataset/` and writes `data/vimedhallu-dataset/vimedhallu-{train,validation,test}.csv` in the ViHallu format, plus `topic`, `corruption` and `source_url` columns.
+`machine-learning/pipelines/build_medical_hallu.py` is a DVC stage (`build_medical`). It reads `data/vimedaqa-dataset/` and writes `data/vimedhallu-dataset/vimedhallu-{train,validation,test}.csv` in the ViHallu format, plus `topic`, `corruption` and `source_url` columns.
 
 | Label | How it is made | Share |
 |---|---|---|
@@ -43,7 +43,7 @@ Sizes: train 39,495 · validation 2,194 · test 2,195, with the three labels exa
 
 ## Baseline and fine-tuning
 
-`ml/pipelines/evaluate_detector.py --data <csv> [--limit N] --out reports/<name>.json` scores the **serving** LightGBM path. It uses the same `HallucinationPipeline` feature code as production and reports:
+`machine-learning/pipelines/evaluate_detector.py --data <csv> [--limit N] --out reports/<name>.json` scores the **serving** LightGBM path. It uses the same `HallucinationPipeline` feature code as production and reports:
 - Macro-F1, both overall and per topic
 - accuracy per corruption type
 - an LLM-only Macro-F1, for reference
@@ -58,7 +58,7 @@ LLM probabilities are cached in `features/<data>_llm_probs.csv` so fine-tuning c
 
 ## Harder data (Phase 4)
 
-`ml/pipelines/generate_hard_medical.py` writes `data/vimedhallu-hard/vimedhallu-hard-{split}.csv`: Claude-written intrinsic/extrinsic rewrites (Batch API, Haiku 5.5) plus balanced gold rows. Report on it separately from the rule-based split, and only after a manual spot check (`reviewed` column). Reviewer feedback exports through `ml/pipelines/export_feedback.py`.
+`machine-learning/pipelines/generate_hard_medical.py` writes `data/vimedhallu-hard/vimedhallu-hard-{split}.csv`: Claude-written intrinsic/extrinsic rewrites (Batch API, Haiku 5.5) plus balanced gold rows. Report on it separately from the rule-based split, and only after a manual spot check (`reviewed` column). Reviewer feedback exports through `machine-learning/pipelines/export_feedback.py`.
 
 ## Next steps
 

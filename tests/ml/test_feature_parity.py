@@ -35,7 +35,7 @@ pytestmark = [
 @pytest.fixture(scope="module")
 def train():
     spec = importlib.util.spec_from_file_location(
-        "train_vihallu", os.path.join(ROOT, "ml/pipelines/train.py")
+        "train_vihallu", os.path.join(ROOT, "machine-learning/pipelines/train.py")
     )
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

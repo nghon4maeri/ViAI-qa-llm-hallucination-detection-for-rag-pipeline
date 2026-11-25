@@ -168,7 +168,7 @@ To effectively detect and classify hallucinations, this project proposes a **mul
 ![Training](docs/images/training-pipeline.png)
 ### Feature Groups
 
-> **Research model vs served model.** The groups below describe the competition model built in `ml/notebooks/`. The model the DVC pipeline trains and the API serves (`ml/pipelines/train.py`, 778 features, OOF Macro-F1 0.8634) is simpler:
+> **Research model vs served model.** The groups below describe the competition model built in `machine-learning/notebooks/`. The model the DVC pipeline trains and the API serves (`machine-learning/pipelines/train.py`, 778 features, OOF Macro-F1 0.8634) is simpler:
 > - mean-pooled **PhoBERT-base** embeddings (768)
 > - statistical features (6)
 > - cosine similarity to the training-set centroid (1)
@@ -267,7 +267,7 @@ This system contributes:
 ```
 vietnamese-llm-hallucination-detection/
 │
-├── services/                       # Deployable applications
+├── applications/                   # Deployable applications
 │   ├── api/                        # FastAPI backend (Python package `backend`) + Alembic
 │   │   ├── backend/app/            #   core, models (ORM), modules (audits, batches, projects, api_keys,
 │   │   │                           #   monitoring, legacy), evaluation (RAG evaluator, judge agent), inference
@@ -275,7 +275,7 @@ vietnamese-llm-hallucination-detection/
 │   │   └── alembic.ini
 │   └── web/                        # SvelteKit UI (RAG trace view, audits, datasets)
 │
-├── ml/                             # Model lifecycle (run by DVC)
+├── machine-learning/                             # Model lifecycle (run by DVC)
 │   ├── pipelines/                  #   embed, train, infer, promote, build_medical, generate_hard,
 │   │                               #   export_feedback, evaluate_detector
 │   ├── scripts/                    #   model registry ops: pull, resolve storage URI, verify pipeline
@@ -288,15 +288,15 @@ vietnamese-llm-hallucination-detection/
 │   ├── mlflow_data.dvc             #   old local MLflow store
 │   └── local/                      #   git-ignored: mlflow.db, mlruns, results
 │
-├── sdk/python/                     # viai_qa client + MCP server
-├── deploy/                         # Everything needed to run it
+├── client-sdk/python/                     # viai_qa client + MCP server
+├── infrastructure/                         # Everything needed to run it
 │   ├── docker-compose.yml          #   local stack (make up)
 │   ├── docker/  nginx/  mlflow/    #   images, gateway, tracking server
 │   ├── k8s/                        #   Helm charts, helmfile, values, KServe
 │   ├── iac/                        #   Terraform (GKE, Cloud SQL) + Ansible
 │   ├── observability/              #   Prometheus, Grafana, Loki, Jaeger, Evidently
 │   ├── ci/  secrets/               #   git-ignored local credentials
-├── tests/                          # api/  ml/  sdk/
+├── tests/                          # api/  ml/  sdk/  (by component under test)
 ├── docs/                           # architecture/  reports/  guides/  images/  + roadmap, refactor plan
 ├── requirements/                   # ci, dev, serving, test
 │
@@ -334,15 +334,15 @@ cd vietnamese-llm-hallucination-detection
 
 **Setup environment:**
 ```bash
-cp deploy/iac/terraform/gke/terraform.tfvars.example deploy/iac/terraform/gke/terraform.tfvars
+cp infrastructure/iac/terraform/gke/terraform.tfvars.example infrastructure/iac/terraform/gke/terraform.tfvars
 # Fill in required values
 ```
 
 **Start core services (MLflow + MinIO + PostgreSQL):**
 ```bash
-docker compose -f deploy/docker-compose.yml up -d minio db
+docker compose -f infrastructure/docker-compose.yml up -d minio db
 sleep 15
-docker compose -f deploy/docker-compose.yml up -d mlflow
+docker compose -f infrastructure/docker-compose.yml up -d mlflow
 ```
 
 **Verify MLflow is running:**
@@ -364,7 +364,7 @@ MinIO UI at `http://localhost:9001` (minioadmin / minioadmin):
 
 **Start backend:**
 ```bash
-docker compose -f deploy/docker-compose.yml up -d backend
+docker compose -f infrastructure/docker-compose.yml up -d backend
 # Backend available at http://localhost:8080
 ```
 FastAPI UI:
@@ -372,7 +372,7 @@ FastAPI UI:
 
 **Start observability stack:**
 ```bash
-docker compose -f deploy/docker-compose.yml up -d prometheus grafana loki promtail jaeger
+docker compose -f infrastructure/docker-compose.yml up -d prometheus grafana loki promtail jaeger
 # Grafana: http://localhost:3000
 # Prometheus: http://localhost:9090
 # Jaeger: http://localhost:16686
@@ -392,7 +392,7 @@ Jaeger — distributed trace for /api/predict:
 
 **Start NGINX API Gateway:**
 ```bash
-docker compose -f deploy/docker-compose.yml up -d nginx-gateway
+docker compose -f infrastructure/docker-compose.yml up -d nginx-gateway
 # API available at http://localhost:80 — requires X-API-Key header
 ```
 
@@ -409,7 +409,7 @@ gcloud config set project vihallu-llm-detect
 
 **Provision GKE cluster:**
 ```bash
-cd deploy/iac/terraform/gke
+cd infrastructure/iac/terraform/gke
 cp terraform.tfvars.example terraform.tfvars
 # Fill in project_id, region, zone
 
@@ -430,7 +430,7 @@ gcloud container clusters get-credentials vihallu-cluster \
 
 **Deploy KServe + Observability stack:**
 ```bash
-cd deploy/iac/ansible
+cd infrastructure/iac/ansible
 ansible-playbook setup_gke_stack.yaml -v
 ```
 
@@ -447,8 +447,8 @@ GCS Console — vihallu-models/hallucination-detector/model/:
 
 **Deploy InferenceService:**
 ```bash
-kubectl apply -f deploy/k8s/runtimes/mlflow-cluster-runtime.yaml
-kubectl apply -f deploy/k8s/kserve/inference-service.yaml
+kubectl apply -f infrastructure/k8s/runtimes/mlflow-cluster-runtime.yaml
+kubectl apply -f infrastructure/k8s/kserve/inference-service.yaml
 kubectl get inferenceservice -n hallucination-prod
 ```
 
@@ -457,12 +457,12 @@ Kserve READY:
 
 **Deploy Backend via Helm:**
 ```bash
-kubectl apply -f deploy/k8s/secrets.yaml
+kubectl apply -f infrastructure/k8s/secrets.yaml
 
 helm upgrade --install hallucination-backend \
-  deploy/k8s/charts/hallucination-backend \
+  infrastructure/k8s/charts/hallucination-backend \
   --namespace hallucination-prod \
-  -f deploy/k8s/values/backend-prod.yaml \
+  -f infrastructure/k8s/values/backend-prod.yaml \
   --wait --timeout=10m
 ```
 
@@ -481,7 +481,7 @@ All pods 2/2 Running:
 
 **Setup Jenkins:**
 ```bash
-docker compose -f deploy/docker-compose.yml up -d jenkins
+docker compose -f infrastructure/docker-compose.yml up -d jenkins
 docker exec hallucination-jenkins \
   cat /var/jenkins_home/secrets/initialAdminPassword
 # Open http://localhost:8080
@@ -562,7 +562,7 @@ make test-ml
 
 **Promote model to production:**
 ```bash
-python ml/pipelines/promote.py
+python machine-learning/pipelines/promote.py
 ```
 
 MLflow model registry — production alias set on v2:
@@ -626,7 +626,7 @@ curl -X POST http://localhost:8080/api/v1/audits/rag/guard -H "Content-Type: app
   -d '{"question": "...", "contexts": ["..."], "answer": "..."}'
 # {"action": "pass" | "regenerate" | "block", "reason": "...", "failing_claims": [...], "audit_id": "..."}
 ```
-A Python SDK and an MCP server for Claude Code / Cursor / other agents live in [`sdk/python`](sdk/python/README.md).
+A Python SDK and an MCP server for Claude Code / Cursor / other agents live in [`client-sdk/python`](client-sdk/python/README.md).
 
 **Deep audit with the Claude judge agent** (Tier 2; needs `ANTHROPIC_API_KEY`):
 ```bash
