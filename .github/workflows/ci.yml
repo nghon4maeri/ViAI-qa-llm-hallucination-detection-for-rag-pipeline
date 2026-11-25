@@ -35,7 +35,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             hallucination-ci:${{ github.sha }} \
-            pytest tests/unit tests/integration \
+            pytest tests \
               --cov=backend \
               --cov-report=xml:/workspace/coverage.xml \
               --cov-report=term-missing \
@@ -102,8 +102,8 @@ jobs:
         id: model-cache
         uses: actions/cache@v4
         with:
-          path: backend/model_store/
-          key: mlflow-model-production-${{ hashFiles('scripts/pull_model_from_registry.py') }}
+          path: artifacts/model_store/
+          key: mlflow-model-production-${{ hashFiles('ml/scripts/pull_model_from_registry.py') }}
           restore-keys: |
             mlflow-model-production-
 
@@ -126,9 +126,9 @@ jobs:
             "mlflow==2.19.0" \
             "boto3==1.34.69" \
             "protobuf>=3.20,<5"
-          python scripts/pull_model_from_registry.py || {
+          python ml/scripts/pull_model_from_registry.py || {
             echo "[WARN] MLflow download failed, creating empty model_store"
-            mkdir -p backend/model_store
+            mkdir -p artifacts/model_store
           }
           deactivate
           rm -rf .venv_mlflow
@@ -136,11 +136,11 @@ jobs:
       - name: Verify model exists
         continue-on-error: true
         run: |
-          if [ ! -d "backend/model_store" ] || [ -z "$(ls -A backend/model_store)" ]; then
+          if [ ! -d "artifacts/model_store" ] || [ -z "$(ls -A artifacts/model_store)" ]; then
             echo "[WARN] Model store is empty, may cause Docker build to fail"
-            mkdir -p backend/model_store
+            mkdir -p artifacts/model_store
           fi
-          ls -la backend/model_store/ | head -10
+          ls -la artifacts/model_store/ | head -10
 
       - name: Build and push Docker image
         id: build

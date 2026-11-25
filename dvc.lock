@@ -9,16 +9,20 @@ stages:
       size: 10728910
     - path: ml/pipelines/embed.py
       hash: md5
-      md5: daa2b6e6864580d192b5203a645caf27
-      size: 1695
+      md5: 52815dc45e3507ea077b6ad86ee17906
+      size: 1705
     outs:
-    - path: features/phobert_embeddings.npy
+    - path: artifacts/features/phobert_embeddings.npy
       hash: md5
       md5: f661bea84978bc74a914545d051fbf92
       size: 21504128
   train:
     cmd: python ml/pipelines/train.py
     deps:
+    - path: artifacts/features/phobert_embeddings.npy
+      hash: md5
+      md5: f661bea84978bc74a914545d051fbf92
+      size: 21504128
     - path: data/vihallu-dataset/vihallu-train.csv
       hash: md5
       md5: ade7a7128908af0dc9c5b5f3737d26c9
@@ -27,25 +31,21 @@ stages:
       hash: md5
       md5: be999df9d039824af3f5d264f020b6b2
       size: 550556
-    - path: features/phobert_embeddings.npy
-      hash: md5
-      md5: f661bea84978bc74a914545d051fbf92
-      size: 21504128
     - path: ml/pipelines/train.py
       hash: md5
-      md5: 1bedc11b611d235ce02c7f6c55407c68
-      size: 8684
+      md5: f1e58ad359ad9ca55c04c048ffb57453
+      size: 8814
     outs:
-    - path: models/feature_schema.json
+    - path: artifacts/models/feature_schema.json
       hash: md5
       md5: 8a6d59aa5a6d20d990c567a8c30326ca
       size: 348
-    - path: models/lgbm
+    - path: artifacts/models/lgbm
       hash: md5
       md5: a3f9f0e64b526a7dd5c4f5a9726da958.dir
       size: 32927378
       nfiles: 6
-    - path: models/metadata.yaml
+    - path: artifacts/models/metadata.yaml
       hash: md5
       md5: 0fa15ee5ff2dd7b8b8ed9d458a7cf503
       size: 130
@@ -60,15 +60,15 @@ stages:
       hash: md5
       md5: be999df9d039824af3f5d264f020b6b2
       size: 550556
-    - path: features/phobert_embeddings.npy
+    - path: artifacts/features/phobert_embeddings.npy
       hash: md5
       md5: d060d969d9da4e05c4dfe16d0137396a
       size: 21504128
-    - path: models/feature_schema.json
+    - path: artifacts/models/feature_schema.json
       hash: md5
       md5: 8a6d59aa5a6d20d990c567a8c30326ca
       size: 348
-    - path: models/lgbm
+    - path: artifacts/models/lgbm
       hash: md5
       md5: 3372436968e42b035cafffe537724879.dir
       size: 32920837
@@ -78,14 +78,14 @@ stages:
       md5: b9d79f3f9028a4b3fedb5e71850d7b0e
       size: 4258
     outs:
-    - path: predictions/vihallu_infer_predictions.csv
+    - path: artifacts/predictions/vihallu_infer_predictions.csv
       hash: md5
       md5: e38cb734aa207a31d4ba483e32ad5b1a
       size: 754641
   promote:
     cmd: python ml/pipelines/promote.py
     deps:
-    - path: models/metadata.yaml
+    - path: artifacts/models/metadata.yaml
       hash: md5
       md5: 68414f93b23c7a86321c401218405fc9
       size: 129

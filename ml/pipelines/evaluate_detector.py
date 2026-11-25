@@ -21,9 +21,10 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import classification_report, f1_score
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path[:0] = [ROOT, os.path.join(ROOT, "services", "api")]  # ml/ and the `backend` package
 
-LABELS = ["extrinsic", "no", "intrinsic"]  # class ids 0, 1, 2 (models/feature_schema.json)
+LABELS = ["extrinsic", "no", "intrinsic"]  # class ids 0, 1, 2 (artifacts/models/feature_schema.json)
 
 
 def load_pipeline():
@@ -34,8 +35,8 @@ def load_pipeline():
     p = HallucinationPipeline()
     p.device_cpu = torch.device("cpu")
     # Only what the LightGBM path needs; NLI/NER feed the guardrails, not the model
-    p.embed_tokenizer = AutoTokenizer.from_pretrained(os.getenv("PHOBERT_TOKENIZER", "models/phobert_tokenizer"))
-    p.embed_model = AutoModel.from_pretrained(os.getenv("PHOBERT_MODEL", "models/phobert")).eval()
+    p.embed_tokenizer = AutoTokenizer.from_pretrained(os.getenv("PHOBERT_TOKENIZER", "artifacts/models/phobert_tokenizer"))
+    p.embed_model = AutoModel.from_pretrained(os.getenv("PHOBERT_MODEL", "artifacts/models/phobert")).eval()
     p.vistral_tokenizer = AutoTokenizer.from_pretrained(VISTRAL_MODEL_NAME)
     p.vistral_model = AutoModelForCausalLM.from_pretrained(
         VISTRAL_MODEL_NAME, torch_dtype=torch.float32, device_map="cpu", low_cpu_mem_usage=True
@@ -78,8 +79,8 @@ def main():
 
     pipeline = load_pipeline()
     base = os.path.splitext(os.path.basename(args.data))[0]
-    os.makedirs("features", exist_ok=True)
-    probs = llm_probs(pipeline, df, f"features/{base}_llm_probs.csv")
+    os.makedirs("artifacts/features", exist_ok=True)
+    probs = llm_probs(pipeline, df, f"artifacts/features/{base}_llm_probs.csv")
 
     X = []
     for r, (_, pr) in zip(df.itertuples(index=False), probs.iterrows()):

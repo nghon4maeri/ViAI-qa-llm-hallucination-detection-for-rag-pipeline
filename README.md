@@ -174,7 +174,7 @@ To effectively detect and classify hallucinations, this project proposes a **mul
 > - cosine similarity to the training-set centroid (1)
 > - three LLM-probability features (3)
 >
-> NLI and NER run at serving time as **guardrails and explanations**, not as LightGBM inputs. See [docs/PHASE_0_FOUNDATION_FIX_REPORT.md](docs/PHASE_0_FOUNDATION_FIX_REPORT.md).
+> NLI and NER run at serving time as **guardrails and explanations**, not as LightGBM inputs. See [docs/PHASE_0_FOUNDATION_FIX_REPORT.md](docs/reports/PHASE_0_FOUNDATION_FIX_REPORT.md).
 
 **1. Fine-tuned Qwen2.5-1.5B Embeddings**
 
@@ -267,45 +267,42 @@ This system contributes:
 ```
 vietnamese-llm-hallucination-detection/
 │
-├── backend/                        # FastAPI application (package `backend`)
-│   ├── main.py                     # App entry, routers, tracing, /health, /metrics
-│   ├── alembic/                    # DB migrations (001 schema, 002 batches, 003 RAG fields)
-│   └── app/
-│       ├── core/                   # Settings, DB session, logging, Prometheus metrics
-│       ├── models/                 # SQLAlchemy ORM (projects, audit_runs, batches, feedback, api_keys)
-│       ├── evaluation/             # EvaluationEngine protocol, adapters, cache, RAG evaluator (rag.py)
-│       ├── inference/              # HallucinationPipeline, MLflow loader, KServe transformer
-│       ├── modules/                # audits, batches, projects, api_keys, monitoring, legacy (/api/predict)
-│       └── utils/                  # Text preprocessing, logger
+├── services/                       # Deployable applications
+│   ├── api/                        # FastAPI backend (Python package `backend`) + Alembic
+│   │   ├── backend/app/            #   core, models (ORM), modules (audits, batches, projects, api_keys,
+│   │   │                           #   monitoring, legacy), evaluation (RAG evaluator, judge agent), inference
+│   │   ├── backend/alembic/        #   migrations 001-004
+│   │   └── alembic.ini
+│   └── web/                        # SvelteKit UI (RAG trace view, audits, datasets)
 │
-├── ml/                             # Everything DVC runs
-│   ├── pipelines/                  # embed.py → train.py → infer.py → promote.py
-│   └── notebooks/                  # EDA and training notebooks
+├── ml/                             # Model lifecycle (run by DVC)
+│   ├── pipelines/                  #   embed, train, infer, promote, build_medical, generate_hard,
+│   │                               #   export_feedback, evaluate_detector
+│   ├── scripts/                    #   model registry ops: pull, resolve storage URI, verify pipeline
+│   └── notebooks/                  #   EDA and research notebooks
 │
-├── data/                           # DVC-tracked datasets
-├── features/                       # DVC output: PhoBERT embeddings
-├── models/                         # DVC output: lgbm/ fold models + centroid, schema, metadata
+├── data/                           # DVC-tracked datasets (ViHallu, ViMedAQA, ViMedHallu)
+├── artifacts/                      # DVC outputs and local-only files
+│   ├── models/                     #   LightGBM folds + centroid, feature schema, PhoBERT copy
+│   ├── features/  predictions/     #   embeddings, inference outputs
+│   ├── mlflow_data.dvc             #   old local MLflow store
+│   └── local/                      #   git-ignored: mlflow.db, mlruns, results
 │
-├── deploy/
-│   ├── docker/                     # Dockerfiles (backend, ci, frontend, jenkins, nginx), init-db.sh
-│   ├── nginx/                      # API gateway config + API keys
-│   ├── mlflow/                     # MLflow tracking server image
-│   ├── k8s/                        # Helm charts, helmfile, values, KServe InferenceService, runtimes
-│   ├── iac/                        # Terraform (GKE, Cloud SQL) + Ansible playbooks
-│   └── ci/                         # Local-only CI credentials (git-ignored)
+├── sdk/python/                     # viai_qa client + MCP server
+├── deploy/                         # Everything needed to run it
+│   ├── docker-compose.yml          #   local stack (make up)
+│   ├── docker/  nginx/  mlflow/    #   images, gateway, tracking server
+│   ├── k8s/                        #   Helm charts, helmfile, values, KServe
+│   ├── iac/                        #   Terraform (GKE, Cloud SQL) + Ansible
+│   ├── observability/              #   Prometheus, Grafana, Loki, Jaeger, Evidently
+│   ├── ci/  secrets/               #   git-ignored local credentials
+├── tests/                          # api/  ml/  sdk/
+├── docs/                           # architecture/  reports/  guides/  images/  + roadmap, refactor plan
+├── requirements/                   # ci, dev, serving, test
 │
-├── observability/                  # Prometheus, Grafana, Loki, Jaeger, Evidently drift service
-├── frontend/                       # SvelteKit UI
-├── scripts/                        # Ops scripts (pull model, resolve storage URI, verify pipeline)
-├── tests/                          # unit/ + integration/ (incl. train/serve feature parity)
-├── docs/                           # PRD, architecture, ADRs, sprint/phase reports, images/
-│
-├── mlops/mlflow_data.dvc           # Old local MLflow store, now DVC-tracked
-├── Jenkinsfile                     # Jenkins CD pipeline (root: Jenkins default)
-├── docker-compose.yml              # Local development stack
-├── dvc.yaml                        # DVC pipeline definition
-├── pyproject.toml                  # Project metadata + pytest config
-└── Makefile                        # make test / test-ml / run / migrate / pipeline / up
+├── Jenkinsfile  dvc.yaml  render.yaml  vercel.json   # stay at the root: their tools look for them here
+├── pyproject.toml  Makefile        # pytest config; make test / run / migrate / up / pipeline
+└── README.md
 ```
 
 ---
@@ -343,9 +340,9 @@ cp deploy/iac/terraform/gke/terraform.tfvars.example deploy/iac/terraform/gke/te
 
 **Start core services (MLflow + MinIO + PostgreSQL):**
 ```bash
-docker compose up -d minio db
+docker compose -f deploy/docker-compose.yml up -d minio db
 sleep 15
-docker compose up -d mlflow
+docker compose -f deploy/docker-compose.yml up -d mlflow
 ```
 
 **Verify MLflow is running:**
@@ -367,7 +364,7 @@ MinIO UI at `http://localhost:9001` (minioadmin / minioadmin):
 
 **Start backend:**
 ```bash
-docker compose up -d backend
+docker compose -f deploy/docker-compose.yml up -d backend
 # Backend available at http://localhost:8080
 ```
 FastAPI UI:
@@ -375,7 +372,7 @@ FastAPI UI:
 
 **Start observability stack:**
 ```bash
-docker compose up -d prometheus grafana loki promtail jaeger
+docker compose -f deploy/docker-compose.yml up -d prometheus grafana loki promtail jaeger
 # Grafana: http://localhost:3000
 # Prometheus: http://localhost:9090
 # Jaeger: http://localhost:16686
@@ -395,7 +392,7 @@ Jaeger — distributed trace for /api/predict:
 
 **Start NGINX API Gateway:**
 ```bash
-docker compose up -d nginx-gateway
+docker compose -f deploy/docker-compose.yml up -d nginx-gateway
 # API available at http://localhost:80 — requires X-API-Key header
 ```
 
@@ -484,7 +481,7 @@ All pods 2/2 Running:
 
 **Setup Jenkins:**
 ```bash
-docker compose up -d jenkins
+docker compose -f deploy/docker-compose.yml up -d jenkins
 docker exec hallucination-jenkins \
   cat /var/jenkins_home/secrets/initialAdminPassword
 # Open http://localhost:8080
@@ -553,7 +550,7 @@ MLflow — experiment runs comparing fold metrics:
 ![MLflow](docs/images/mlflow-metric.png)
 
 **Model performance (OOF):**
-- F1 Score: **0.8634** (v2.1; see [Phase 0 report](docs/PHASE_0_FOUNDATION_FIX_REPORT.md))
+- F1 Score: **0.8634** (v2.1; see [Phase 0 report](docs/reports/PHASE_0_FOUNDATION_FIX_REPORT.md))
 
 - Model: `vihallu-detector` v2.1
 - Alias: `production`

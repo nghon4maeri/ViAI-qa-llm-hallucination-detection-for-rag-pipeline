@@ -68,4 +68,4 @@ Or add it to any MCP client config:
 
 Results are trimmed to what an agent needs to act on (verdicts, failing sentences, ids), so they don't fill the caller's context with every NLI score. `get_audit` returns the full detail through the SDK.
 
-Tests: `tests/integration/test_sdk_mcp.py` drives the SDK and the MCP tools against the real FastAPI app.
+Tests: `tests/sdk/test_sdk_mcp.py` drives the SDK and the MCP tools against the real FastAPI app.

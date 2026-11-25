@@ -9,9 +9,9 @@ env/
 .env
 .vscode/
 
-/models/*
-!/models/.gitignore
-!/models/*.dvc
+/artifacts/models/*
+!/artifacts/models/.gitignore
+!/artifacts/models/*.dvc
 result/
 predictions/
 
@@ -47,7 +47,7 @@ terraform.tfvars
 .DS_Store
 .vercel/
 .vercel
-frontend/.vercel
+services/web/.vercel
 .svelte-kit-old
 
 deploy/ci/**/secrets*
@@ -57,10 +57,13 @@ deploy/ci/kubeconfig*
 deploy/secrets/
 config_flat
 auth-file.venv_mlflow/
-/models/*
-!/models/.gitignore
-!/models/*.dvc
-backend/model_store/
+/artifacts/models/*
+!/artifacts/models/.gitignore
+!/artifacts/models/*.dvc
+artifacts/model_store/
+services/api/backend/model_store/
+# Local MLflow store, competition results, scratch
+artifacts/local/
 *.pth
 *.pkl
 docs/.svelte-kit-old

@@ -75,7 +75,7 @@ pipeline {
                         -t hallucination-ci:${GIT_SHA_SHORT} .
 
                     CONTAINER_ID=$(docker create hallucination-ci:${GIT_SHA_SHORT} \
-                        pytest tests/unit tests/integration \
+                        pytest tests \
                             --cov=backend \
                             --cov-report=xml:/tmp/coverage.xml \
                             --cov-fail-under=${COVERAGE_THRESHOLD})
@@ -164,11 +164,11 @@ pipeline {
 
                             pip install --quiet --break-system-packages mlflow boto3 google-cloud-storage
 
-                            python3 scripts/pull_model_from_registry.py
+                            python3 ml/scripts/pull_model_from_registry.py
 
                             # Upload to GCS instead of embedding
                             echo "[INFO] Uploading models to GCS..."
-                            gsutil -m cp -r backend/model_store/* \
+                            gsutil -m cp -r artifacts/model_store/* \
                             gs://${GCS_BUCKET}/hallucination-detector/
 
                             echo "[OK] Models ready in GCS"

@@ -1,10 +1,10 @@
 # ViAI-QA Improvement Roadmap: RAG Evaluation & Guardrail Platform
 
-**Status:** Phases 0, 1, 2, 3, 4 and 5 (first pass) done. Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Medical dataset built; the baseline is blocked on downloading the Qwen weights (see [MEDICAL_DOMAIN.md](MEDICAL_DOMAIN.md)). Phase 5 first pass done.
+**Status:** Phases 0, 1, 2, 3, 4 and 5 (first pass) done. Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](reports/PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Medical dataset built; the baseline is blocked on downloading the Qwen weights (see [MEDICAL_DOMAIN.md](architecture/MEDICAL_DOMAIN.md)). Phase 5 first pass done.
 
 ## Domain focus
 
-**Healthcare (Vietnamese).** The platform stays domain-agnostic, but data, benchmarks, fine-tuning and the demo target medical RAG. See [MEDICAL_DOMAIN.md](MEDICAL_DOMAIN.md).
+**Healthcare (Vietnamese).** The platform stays domain-agnostic, but data, benchmarks, fine-tuning and the demo target medical RAG. See [MEDICAL_DOMAIN.md](architecture/MEDICAL_DOMAIN.md).
 
 Revised order: **medical dataset (ViMedHallu) ✅ → baseline + fine-tune → P5 trace view → P2 agent (+ LLM-written hard split) → P3 MCP → P6 medical RAG demo.**
 
@@ -62,7 +62,7 @@ ensemble, add a regression test. Details in the Phase 0 report.
 
 **Done:**
 - `POST /api/v1/audits/rag` (`question`, `contexts[]`, `answer`). It lives under `/audits` instead of the planned `/rag/evaluate`, so RAG audits reuse history, feedback and metrics unchanged.
-- `backend/app/evaluation/rag.py`: punctuation-based claim split. Each claim is scored against each chunk by the existing `EvaluationEngine` through `evaluation_cache`. A claim counts as supported if any chunk says `no`; otherwise it takes the verdict of the most related chunk (lowest NLI neutral).
+- `services/api/backend/app/evaluation/rag.py`: punctuation-based claim split. Each claim is scored against each chunk by the existing `EvaluationEngine` through `evaluation_cache`. A claim counts as supported if any chunk says `no`; otherwise it takes the verdict of the most related chunk (lowest NLI neutral).
 - Overall label: `no` only if every claim is supported, otherwise `intrinsic` takes precedence over `extrinsic`. `faithfulness` = share of supported claims.
 - Migration `003_add_rag_fields`: `audit_runs.contexts`, `claims`, `faithfulness`.
 - `RagMetrics`, stored in `audit_runs.rag_metrics` (`ground_truth` gets its own column):
@@ -70,7 +70,7 @@ ensemble, add a regression test. Details in the Phase 0 report.
   - `context_recall`: share of `ground_truth` sentences that the chunks support. Same detector, used in the other direction.
   - `answer_relevance`, `context_relevance[]`: question cosines from engines that implement the optional `EmbeddingEngine.embed()`; `None` otherwise. With PhoBERT they separate related from random text (AUC 0.85 question–answer, 0.77 question–context, measured on 150 ViHallu rows) but are **not calibrated**: compare across runs, don't threshold. Upgrade: a Vietnamese bi-encoder.
 - RAG batches: `POST /api/v1/batches/upload` with a `.jsonl` file (one `{question, contexts, answer, ground_truth?}` per line; a bad line returns 400 with its line number). Batch detail adds `faithfulness` per item and `mean_faithfulness`; CSV export adds a `faithfulness` column.
-- Tests: `tests/unit/test_rag_evaluation.py`, `tests/integration/test_batches_api.py`.
+- Tests: `tests/api/test_rag_evaluation.py`, `tests/api/test_batches_api.py`.
 
 **Not done:** answer correctness against `ground_truth`. It needs a semantic-equivalence judge, so it is planned for the Phase 2 agent.
 
@@ -84,7 +84,7 @@ Original plan:
 ### Phase 2: LLM judge agent (tool calling) ✅ (built; not yet run against the live API)
 
 **Done (2026-11-25):**
-- `backend/app/evaluation/judge_agent.py` is the Tier 2 Claude agent. It is a manual tool loop (every call is recorded for the UI and traced with OpenTelemetry when available) and has three tools:
+- `services/api/backend/app/evaluation/judge_agent.py` is the Tier 2 Claude agent. It is a manual tool loop (every call is recorded for the UI and traced with OpenTelemetry when available) and has three tools:
   - `detect_hallucination(claim, context_index)`: the Tier 1 detector through `evaluation_cache`
   - `check_numbers(claim, context_index)`: dose/duration/percentage comparison, digits inside names ignored
   - `submit_verdict` (strict schema): ends the loop
@@ -94,7 +94,7 @@ Original plan:
 - The verdict is stored in `audit_runs.judge` (migration `004`). Overall label and faithfulness use the Tier 1 aggregation rule, so the two tiers are comparable.
 - Refusals and incomplete runs leave Tier 1 standing (`status = refused | incomplete`).
 - UI: `JudgePanel.svelte` in the trace view shows the agent's summary, each overruled sentence (Tier 1 label struck through, new label, reason, evidence chunk), the tool-call trail, and the token usage.
-- Tests: `tests/unit/test_judge_agent.py` (8 tests) runs a scripted fake client, so it makes no API calls.
+- Tests: `tests/api/test_judge_agent.py` (8 tests) runs a scripted fake client, so it makes no API calls.
 
 **Cost-first configuration (user decision):**
 
@@ -131,7 +131,7 @@ Haiku 5.5 has no server-side refusal fallback, so the `fallbacks` parameter is s
 - **Fixes found along the way:**
   - `CORRECT` feedback stored the string "CORRECT" as `corrected_label`, so the row was unusable for retraining. It now stores the audit's own label.
   - On current FastAPI/Starlette (0.165 / 1.10, what `fastapi>=0.111` installs today), `TestClient` runs background tasks and surfaces their errors. The batch worker used the real `SessionLocal` in tests; the test fixture now gives it the test connection.
-- Tests: `tests/integration/test_sdk_mcp.py` (7). Full suite: 98 passed.
+- Tests: `tests/sdk/test_sdk_mcp.py` (7). Full suite: 98 passed.
 
 **Not done:** LangChain/LlamaIndex callbacks. They are a few lines on top of `ViaiQA.guard`/`evaluate` and are left for when a demo pipeline needs them (Phase 6).
 
@@ -151,7 +151,7 @@ Haiku 5.5 has no server-side refusal fallback, so the `fallbacks` parameter is s
 - **Feedback export** `ml/pipelines/export_feedback.py` (DVC stage `export_feedback`, needs `DATABASE_URL`) writes reviewed audits → `data/feedback/feedback-export.csv` in the ViHallu format.
   - Labels are normalised: `CORRECT` → the audit's label, legacy `no_hallucination` → `no`.
   - `model_label` is kept so the rows where the reviewer overruled the model can be weighted or inspected.
-- Tests: `tests/unit/test_flywheel.py` (9): a fake Batch API returning results in shuffled order, label normalisation, and export from the test database.
+- Tests: `tests/ml/test_flywheel.py` (9): a fake Batch API returning results in shuffled order, label normalisation, and export from the test database.
 
 **Closing the loop (blocked, same blocker as the baseline):** `ml/pipelines/train.py` needs PhoBERT embeddings and the 3 LLM `prob_*` features for every training row. ViMedHallu, the hard split and the feedback rows don't have the LLM features yet. `evaluate_detector.py` already computes and caches them (`features/<data>_llm_probs.csv`). Once the Qwen weights are available:
 1. Run it on each new CSV.

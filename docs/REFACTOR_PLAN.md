@@ -1,6 +1,6 @@
 # Refactor Plan: Main Folders, Same Stack and Architecture
 
-**Status:** R1 done (2026-11-25); R2–R6 not started
+**Status:** R1 and R3 done (2026-11-25); R2, R4–R6 not started
 **Constraint:** keep the tech stack and the architecture in the README: FastAPI + NGINX, PyTorch/HF + LightGBM, MLflow + DVC + MinIO/GCS, KServe/MLServer, Docker/Helm/GKE, Terraform/Ansible, GitHub Actions + Jenkins, Prometheus/Grafana/Loki/Jaeger/Evidently, SvelteKit. Nothing is removed. Code is moved, deduplicated, or wired up to match the design.
 
 ## 1. Why
@@ -92,7 +92,33 @@ Each phase is one commit (or PR). The full test suite and `svelte-check` must pa
 - `train.py`, `infer.py` and `HallucinationPipeline` all import it. The parity test then checks one function against the stored matrix.
 - The API image installs it as a local package. The ML code keeps its own requirements, and the API does not import pipeline scripts.
 
-### R3 Folder moves
+### R3 Folder moves ✅ (done before R2, at the user's request)
+
+**Done:**
+- `backend/` + `alembic.ini` → `services/api/`; `frontend/` → `services/web/`.
+- `models/`, `features/`, `predictions/`, `mlops/mlflow_data` → `artifacts/`. Local-only `mlflow.db`, `mlruns/`, `result/` → `artifacts/local/` (git-ignored).
+- `observability/` → `deploy/observability/`. The Helmfile and Ansible relative paths already resolved there, so nothing changed in them. Evidently stays in it rather than moving to `services/drift`.
+- `scripts/` → `ml/scripts/`; `docker-compose.yml` → `deploy/`; `requirements-*.txt` → `requirements/*.txt`.
+- `docs/` split into `architecture/`, `reports/`, `guides/`; `tests/` split into `api/`, `ml/`, `sdk/`.
+- Paths inside containers are unchanged (`/app/backend`, `/app/models`, `/app/predictions`). Only build sources moved, so Helm values and K8s manifests needed no edits.
+
+**Path handling:**
+- pytest `pythonpath = ["services/api", "."]`.
+- `alembic.ini` uses `%(here)s`.
+- `Settings.MODELS_DIR` finds the checkout root by its `dvc.yaml` (falls back to `models` under the container WORKDIR). It replaces `BASE_DIR` arithmetic that would have broken one level deeper.
+- Compose pins `name: vietnamese-llm-hallucination-detection`, so moving it into `deploy/` does not create new, empty named volumes.
+
+**Also fixed:** `Dockerfile.ci` only copied `backend` and `tests`, so the ML and SDK tests could not run in CI. It now mirrors the repo layout, and `requirements/ci.txt` adds pandas, pyarrow and mcp.
+
+**Checks:**
+- pytest 102 passed (parity reproduces OOF from the new paths)
+- `alembic upgrade head` from `services/api`
+- API boots and `/health` returns ok
+- web: `svelte-check` 0, vitest 5/5, `vite build` OK
+- `docker compose config` resolves every new path
+- `dvc status`: only stale deps, no missing outputs; lock committed
+
+**Original scope:**
 - `git mv` into the layout above, one area per commit: services → artifacts → tests → docs.
 - Update `Dockerfile`s (build contexts), Compose, GH Actions, Jenkins `HELM_CHART_PATH` / `dir()` paths, Ansible relative paths, `dvc.yaml` outs + `dvc.lock`, `.coveragerc`, `pyproject` testpaths, `alembic.ini` `script_location`, and the README/doc links.
 - `backend` stays the package name, so imports are unchanged. Only the paths on `sys.path` and in Docker change.

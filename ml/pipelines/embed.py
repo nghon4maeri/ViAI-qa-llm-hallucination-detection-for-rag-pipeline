@@ -11,7 +11,7 @@ DEVICE = "cpu"
 BATCH_SIZE = 8
 
 DATA_PATH = "data/vihallu-dataset/vihallu-train.csv"
-OUT_DIR = "features"
+OUT_DIR = "artifacts/features"
 OUT_FILE = f"{OUT_DIR}/phobert_embeddings.npy"
 
 os.makedirs(OUT_DIR, exist_ok=True)

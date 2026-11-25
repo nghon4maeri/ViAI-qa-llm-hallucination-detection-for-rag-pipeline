@@ -2,7 +2,7 @@
 """
 train.py
 Train PhoBERT + LightGBM ensemble for Vietnamese hallucination detection.
-Outputs: models/lgbm/, models/metadata.yaml, models/feature_schema.json
+Outputs: artifacts/models/lgbm/, artifacts/models/metadata.yaml, artifacts/models/feature_schema.json
 """
 
 import os
@@ -92,7 +92,7 @@ def build_cosine_sim(X_embed: np.ndarray) -> np.ndarray:
 
 
 def load_phobert_embeddings() -> np.ndarray:
-    return np.load("features/phobert_embeddings.npy")
+    return np.load("artifacts/features/phobert_embeddings.npy")
 
 
 def load_vistral_feats() -> np.ndarray:
@@ -167,7 +167,7 @@ def main():
     X = build_feature_matrix(contexts, prompts, responses, X_embed, X_vistral)
     print(f"[INFO] Feature matrix shape: {X.shape}")
 
-    os.makedirs("models", exist_ok=True)
+    os.makedirs("artifacts/models", exist_ok=True)
     feature_schema = {
         "feature_dim":  int(X.shape[1]),
         "components":   FEAT_DIMS,
@@ -175,7 +175,7 @@ def main():
         "column_order": ["phobert_embeddings", "simple_features",
                          "cosine_similarity", "vistral_probs"],
     }
-    with open("models/feature_schema.json", "w") as f:
+    with open("artifacts/models/feature_schema.json", "w") as f:
         json.dump(feature_schema, f, indent=2)
     print("[INFO] feature_schema.json saved.")
 
@@ -190,9 +190,9 @@ def main():
             "model_name":   MODEL_NAME,
         })
 
-        os.makedirs("models/lgbm", exist_ok=True)
+        os.makedirs("artifacts/models/lgbm", exist_ok=True)
         # Serving needs the same centroid as build_cosine_sim(); ships with the fold models
-        np.save("models/lgbm/embedding_centroid.npy", X_embed.mean(axis=0))
+        np.save("artifacts/models/lgbm/embedding_centroid.npy", X_embed.mean(axis=0))
         oof_preds = np.zeros((len(y), 3))
 
         skf = StratifiedKFold(
@@ -224,7 +224,7 @@ def main():
             mlflow.log_metric(f"fold_{fold}_macro_f1", fold_f1)
             print(f"  Fold {fold}: macro F1 = {fold_f1:.4f}")
 
-            model_path = f"models/lgbm/fold_{fold}.txt"
+            model_path = f"artifacts/models/lgbm/fold_{fold}.txt"
             clf.booster_.save_model(model_path)
 
         oof_f1 = f1_score(y, np.argmax(oof_preds, axis=1), average="macro")
@@ -241,7 +241,7 @@ def main():
         mlflow.pyfunc.log_model(
             artifact_path="model",
             python_model=LGBMEnsemble(),
-            artifacts={"models_dir": "models/lgbm"},
+            artifacts={"models_dir": "artifacts/models/lgbm"},
             signature=signature,
             input_example=sample_input,
             pip_requirements=[
@@ -260,11 +260,11 @@ def main():
             "oof_macro_f1": float(oof_f1),
             "model_name":   MODEL_NAME,
         }
-        with open("models/metadata.yaml", "w") as f:
+        with open("artifacts/models/metadata.yaml", "w") as f:
             yaml.dump(metadata, f)
 
-        mlflow.log_artifact("models/metadata.yaml")
-        mlflow.log_artifact("models/feature_schema.json")
+        mlflow.log_artifact("artifacts/models/metadata.yaml")
+        mlflow.log_artifact("artifacts/models/feature_schema.json")
 
         print("[INFO] Training completed successfully.")
 

@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     git curl libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements-serving.txt .
+COPY requirements/serving.txt requirements-serving.txt
 
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir \
@@ -26,11 +26,11 @@ RUN pip install --upgrade pip && \
       mlflow==2.11.3 && \
     pip install --no-cache-dir -r requirements-serving.txt
 
-COPY backend backend
-COPY alembic.ini alembic.ini
+COPY services/api/backend backend
+COPY services/api/alembic.ini alembic.ini
 RUN mkdir -p /app/models /app/predictions
 
-COPY models models
+COPY artifacts/models models
 
 EXPOSE 8080
 

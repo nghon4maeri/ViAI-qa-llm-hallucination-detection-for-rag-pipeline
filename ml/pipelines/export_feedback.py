@@ -16,7 +16,8 @@ from typing import Optional
 
 import pandas as pd
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path[:0] = [ROOT, os.path.join(ROOT, "services", "api")]  # ml/ and the `backend` package
 
 OUT_PATH = "data/feedback/feedback-export.csv"
 LABELS = {"no", "intrinsic", "extrinsic"}

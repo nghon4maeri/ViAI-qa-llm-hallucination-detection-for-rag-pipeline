@@ -3,7 +3,7 @@ FROM python:3.10-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DISABLE_MODEL=true
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/services/api:/app
 
 WORKDIR /app
 
@@ -11,18 +11,20 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir --upgrade pip
 
-COPY requirements-ci.txt .
+COPY requirements/ci.txt requirements-ci.txt
 RUN pip install --no-cache-dir -r requirements-ci.txt
 
-COPY backend backend
+# Same layout as the repo: the API, the ML pipelines and the SDK are all under test
+COPY services/api services/api
+COPY ml ml
+COPY sdk sdk
 COPY tests tests
-COPY alembic.ini alembic.ini
 COPY .coveragerc .
 COPY pyproject.toml .
 
 RUN mkdir -p /workspace && chmod 777 /workspace
 
-CMD ["pytest", "tests/unit", "tests/integration", \
+CMD ["pytest", "tests", \
      "--cov=backend", \
      "--cov-config=.coveragerc", \
      "--cov-report=xml:/workspace/coverage.xml", \

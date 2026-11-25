@@ -15,12 +15,12 @@ from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-EMB_PATH            = "features/phobert_embeddings.npy"
+EMB_PATH            = "artifacts/features/phobert_embeddings.npy"
 VISTRAL_PATH        = "data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv"
 DATA_PATH           = "data/vihallu-dataset/vihallu-train.csv"
-MODEL_DIR           = Path("models/lgbm")
-FEATURE_SCHEMA_PATH = "models/feature_schema.json"
-OUT_PATH            = "predictions/vihallu_infer_predictions.csv"
+MODEL_DIR           = Path("artifacts/models/lgbm")
+FEATURE_SCHEMA_PATH = "artifacts/models/feature_schema.json"
+OUT_PATH            = "artifacts/predictions/vihallu_infer_predictions.csv"
 
 LABELS = ["extrinsic", "no", "intrinsic"]
 
