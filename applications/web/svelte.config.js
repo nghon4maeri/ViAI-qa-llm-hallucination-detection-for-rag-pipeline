@@ -8,9 +8,7 @@ const isVercel = Boolean(process.env.VERCEL);
 const config = {
 	preprocess: vitePreprocess(),
 	kit: {
-		adapter: isVercel 
-			? adapterVercel({ runtime: 'nodejs22.x' }) 
-			: adapterNode()
+		adapter: isVercel ? adapterVercel({ runtime: 'nodejs22.x' }) : adapterNode()
 	}
 };
 

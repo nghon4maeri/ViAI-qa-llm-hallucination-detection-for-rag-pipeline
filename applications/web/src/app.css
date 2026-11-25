@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /*
  * ViAI-QA design tokens. Direction: a pharmacist's desk - drug leaflets on warm paper,
@@ -7,129 +7,145 @@
  * Based on unslop by Damir Sokolovsky (@heydamir), CC BY 4.0.
  */
 :root {
-    --page: #f7f4ee;
-    --card: #fdfbf7;
-    --raised: #efe9df;
-    --line: rgb(31 27 22 / 0.08);
-    --line-strong: rgb(31 27 22 / 0.16);
-    --ink: #1f1b16;
-    --ink-2: #5e554a;
-    --ink-3: #7b7266;
+	--page: #f7f4ee;
+	--card: #fdfbf7;
+	--raised: #efe9df;
+	--line: rgb(31 27 22 / 0.08);
+	--line-strong: rgb(31 27 22 / 0.16);
+	--ink: #1f1b16;
+	--ink-2: #5e554a;
+	--ink-3: #7b7266;
 
-    --accent: #0e5f6b;
-    --accent-hover: #0b4c56;
-    --accent-soft: #e1edee;
-    --on-accent: #ffffff;
+	--accent: #0e5f6b;
+	--accent-hover: #0b4c56;
+	--accent-soft: #e1edee;
+	--on-accent: #ffffff;
 
-    /* Verdict colours: text colour + highlighter mark */
-    --ok: #1f7a45;
-    --ok-mark: #d8eedd;
-    --bad: #b42318;
-    --bad-mark: #f9dfda;
-    --warn: #8a5300;
-    --warn-mark: #f6e6c2;
+	/* Verdict colours: text colour + highlighter mark */
+	--ok: #1f7a45;
+	--ok-mark: #d8eedd;
+	--bad: #b42318;
+	--bad-mark: #f9dfda;
+	--warn: #8a5300;
+	--warn-mark: #f6e6c2;
 
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
-    --ease: cubic-bezier(0.22, 1, 0.36, 1);
-    color-scheme: light;
+	--shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
+	--ease: cubic-bezier(0.22, 1, 0.36, 1);
+	color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
-        --page: #161513;
-        --card: #1c1a18;
-        --raised: #262421;
-        --line: rgb(239 233 222 / 0.08);
-        --line-strong: rgb(239 233 222 / 0.16);
-        --ink: #efe9de;
-        --ink-2: #aaa398;
-        --ink-3: #8a847a;
+	:root {
+		--page: #161513;
+		--card: #1c1a18;
+		--raised: #262421;
+		--line: rgb(239 233 222 / 0.08);
+		--line-strong: rgb(239 233 222 / 0.16);
+		--ink: #efe9de;
+		--ink-2: #aaa398;
+		--ink-3: #8a847a;
 
-        --accent: #7cc4cd;
-        --accent-hover: #9ad3da;
-        --accent-soft: rgb(124 196 205 / 0.12);
-        --on-accent: #10211f;
+		--accent: #7cc4cd;
+		--accent-hover: #9ad3da;
+		--accent-soft: rgb(124 196 205 / 0.12);
+		--on-accent: #10211f;
 
-        --ok: #74d29e;
-        --ok-mark: rgb(76 195 138 / 0.18);
-        --bad: #ff8a80;
-        --bad-mark: rgb(229 72 77 / 0.2);
-        --warn: #e8b562;
-        --warn-mark: rgb(232 181 98 / 0.18);
+		--ok: #74d29e;
+		--ok-mark: rgb(76 195 138 / 0.18);
+		--bad: #ff8a80;
+		--bad-mark: rgb(229 72 77 / 0.2);
+		--warn: #e8b562;
+		--warn-mark: rgb(232 181 98 / 0.18);
 
-        --shadow-sm: none;
-        color-scheme: dark;
-    }
+		--shadow-sm: none;
+		color-scheme: dark;
+	}
 }
 
 @theme inline {
-    --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
-    --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+	--font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
 
-    --color-page: var(--page);
-    --color-card: var(--card);
-    --color-raised: var(--raised);
-    --color-line: var(--line);
-    --color-line-strong: var(--line-strong);
-    --color-ink: var(--ink);
-    --color-ink-2: var(--ink-2);
-    --color-ink-3: var(--ink-3);
-    --color-accent: var(--accent);
-    --color-accent-hover: var(--accent-hover);
-    --color-accent-soft: var(--accent-soft);
-    --color-on-accent: var(--on-accent);
-    --color-ok: var(--ok);
-    --color-ok-mark: var(--ok-mark);
-    --color-bad: var(--bad);
-    --color-bad-mark: var(--bad-mark);
-    --color-warn: var(--warn);
-    --color-warn-mark: var(--warn-mark);
+	--color-page: var(--page);
+	--color-card: var(--card);
+	--color-raised: var(--raised);
+	--color-line: var(--line);
+	--color-line-strong: var(--line-strong);
+	--color-ink: var(--ink);
+	--color-ink-2: var(--ink-2);
+	--color-ink-3: var(--ink-3);
+	--color-accent: var(--accent);
+	--color-accent-hover: var(--accent-hover);
+	--color-accent-soft: var(--accent-soft);
+	--color-on-accent: var(--on-accent);
+	--color-ok: var(--ok);
+	--color-ok-mark: var(--ok-mark);
+	--color-bad: var(--bad);
+	--color-bad-mark: var(--bad-mark);
+	--color-warn: var(--warn);
+	--color-warn-mark: var(--warn-mark);
 
-    --ease-out: var(--ease);
+	--ease-out: var(--ease);
 }
 
 html,
 body {
-    background-color: var(--page);
-    color: var(--ink);
+	background-color: var(--page);
+	color: var(--ink);
 }
 
 body {
-    font-family: var(--font-sans);
-    font-size: 14px;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
+	font-family: var(--font-sans);
+	font-size: 14px;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
 }
 
 :focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
 ::selection {
-    background: var(--accent-soft);
+	background: var(--accent-soft);
 }
 
 /* Highlighter marks for answer sentences. Underline style differs so the verdict never relies on colour alone */
 .mark {
-    border-radius: 3px;
-    padding: 1px 2px;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-    text-underline-offset: 4px;
-    text-decoration-thickness: 2px;
-    transition: box-shadow 150ms var(--ease), background-color 150ms var(--ease);
+	border-radius: 3px;
+	padding: 1px 2px;
+	box-decoration-break: clone;
+	-webkit-box-decoration-break: clone;
+	text-underline-offset: 4px;
+	text-decoration-thickness: 2px;
+	transition:
+		box-shadow 150ms var(--ease),
+		background-color 150ms var(--ease);
 }
-.mark-ok { background: var(--ok-mark); }
-.mark-bad { background: var(--bad-mark); text-decoration-line: underline; text-decoration-style: solid; text-decoration-color: var(--bad); }
-.mark-warn { background: var(--warn-mark); text-decoration-line: underline; text-decoration-style: dashed; text-decoration-color: var(--warn); }
-.mark[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--accent); }
+.mark-ok {
+	background: var(--ok-mark);
+}
+.mark-bad {
+	background: var(--bad-mark);
+	text-decoration-line: underline;
+	text-decoration-style: solid;
+	text-decoration-color: var(--bad);
+}
+.mark-warn {
+	background: var(--warn-mark);
+	text-decoration-line: underline;
+	text-decoration-style: dashed;
+	text-decoration-color: var(--warn);
+}
+.mark[aria-pressed='true'] {
+	box-shadow: 0 0 0 2px var(--accent);
+}
 
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        transition-duration: 0ms !important;
-        animation-duration: 0ms !important;
-    }
+	*,
+	*::before,
+	*::after {
+		transition-duration: 0ms !important;
+		animation-duration: 0ms !important;
+	}
 }

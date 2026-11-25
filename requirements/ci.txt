@@ -21,7 +21,8 @@ opentelemetry-sdk>=1.26.0
 opentelemetry-semantic-conventions>=0.47b0
 opentelemetry-instrumentation-fastapi>=0.47b0
 opentelemetry-exporter-otlp>=1.26.0
-prometheus-fastapi-instrumentator==7.0.0
+# 7.x crashes on FastAPI >= 0.160 (_IncludedRouter has no .path); 8.x supports it
+prometheus-fastapi-instrumentator>=8.0
 
 # Database & Migrations (Sprint 1)
 sqlalchemy>=2.0.25
@@ -31,6 +32,7 @@ pydantic-settings>=2.1.0
 
 # ML data tests (tests/ml) and SDK/MCP tests (tests/sdk)
 pandas>=2.0,<3
+scikit-learn>=1.4  # vihallu_features.centroid_cosine
 pyarrow>=14.0
 mcp>=1.2
 pyyaml>=6.0  # tests/infra

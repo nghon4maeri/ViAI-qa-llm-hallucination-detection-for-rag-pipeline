@@ -9,6 +9,11 @@ on:
     branches:
       - main
 
+# A newer push to the same branch supersedes the running pipeline
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/hallucination-backend
@@ -59,10 +64,61 @@ jobs:
           name: coverage-report
           path: coverage.xml
 
+  web:
+    name: Web (lint, type-check, test, build)
+    runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: applications/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: applications/web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint (prettier + eslint)
+        run: npm run lint
+
+      - name: Type-check (svelte-check)
+        run: npm run check
+
+      - name: Unit tests (vitest)
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+  packages:
+    name: Python packages install and import
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Installs the two packages the way users and images do, from their own pyproject.toml
+      - name: Install vihallu-features and viai-qa[mcp] in a clean venv
+        run: |
+          python3 -m venv .venv_packages
+          . .venv_packages/bin/activate
+          pip install --quiet --upgrade pip
+          pip install --quiet ./machine-learning "./client-sdk/python[mcp]"
+          python -c "import vihallu_features as vf; assert vf.FEATURE_DIM == 778"
+          python -c "import viai_qa, viai_qa.mcp_server; print('viai_qa', viai_qa.ViaiQA)"
+          command -v viai-qa-mcp
+          deactivate
+          rm -rf .venv_packages
+
   build:
     name: Build & Push Image
     runs-on: self-hosted
-    needs: test
+    needs: [test, web, packages]
     if: github.event_name == 'push'
     outputs:
       image_tag: ${{ steps.meta.outputs.tags }}

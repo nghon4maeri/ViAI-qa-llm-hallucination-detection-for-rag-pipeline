@@ -1,6 +1,6 @@
 # Refactor Plan: Main Folders, Same Stack and Architecture
 
-**Status:** R1, R2 and R3 done (2026-11-25), folders renamed; R4–R6 not started
+**Status:** R1, R2, R3 and R6 done (2026-11-25); R4, R5 not started
 **Constraint:** keep the tech stack and the architecture in the README: FastAPI + NGINX, PyTorch/HF + LightGBM, MLflow + DVC + MinIO/GCS, KServe/MLServer, Docker/Helm/GKE, Terraform/Ansible, GitHub Actions + Jenkins, Prometheus/Grafana/Loki/Jaeger/Evidently, SvelteKit. Nothing is removed. Code is moved, deduplicated, or wired up to match the design.
 
 ## 1. Why
@@ -149,7 +149,31 @@ Each phase is one commit (or PR). The full test suite and `svelte-check` must pa
 - `ml/params.yaml` (folds, seed, `JUDGE_*`, generator model, escalation threshold) is read by DVC (`params:`) and MLflow logging, so experiments are comparable.
 - Requirements: keep the four `requirements-*.txt` files (CI and images depend on them), but generate them from `pyproject.toml` extras (`serving`, `ml`, `dev`, `test`) with `pip-compile` so versions stop drifting.
 
-### R6 CI/CD
+### R6 CI/CD ✅
+
+**Done:**
+- `.github/workflows/ci.yml` gains a `web` job and a `packages` job, and `concurrency` cancels superseded runs.
+  - `web` runs Node 22 with an npm cache: `npm ci`, then lint (prettier + eslint), `svelte-check`, vitest and `vite build`.
+  - `packages` installs `./machine-learning` and `./client-sdk/python[mcp]` into a clean venv and imports both; `viai-qa-mcp` must be on PATH.
+  - The image build now needs `test`, `web` and `packages`, and the Jenkins deploy follows the image build.
+- Frontend made lint-clean instead of skipping lint: Prettier applied with the project config; 38 ESLint errors fixed.
+  - Keys on every `{#each}`.
+  - `catch (e: any)` replaced by `unknown` plus a shared `errorMessage()`.
+  - Typed interval handle.
+  - One scoped exception, for the absolute CSV download link.
+- **Two real bugs found by testing in a clean CI-only venv**, which the dev venv hid:
+  1. `requirements/ci.txt` pinned `prometheus-fastapi-instrumentator==7.0.0` while `fastapi>=0.111` resolves to 0.163. Instrumentator 7 crashes on every request with the new router type (`'_IncludedRouter' object has no attribute 'path'`), so 42 tests failed and coverage was 68%. The dev venv passed only because `conftest.py` mocked the missing package. This predates the refactor. Instrumentator is now `>=8.0` in ci/serving/test.
+  2. `conftest.py` replaced a missing `torch` with a `MagicMock`. That broke scikit-learn's array checks, and `importorskip("torch")` silently "passed". Nothing imports torch at module load, so torch/transformers/lightgbm are no longer mocked, and the parity test skips without the ML stack.
+- **Trace view fix found while re-checking the UI:** claim marks were `<button>` elements, which browsers lay out as inline-block even with `display: inline`, so each sentence broke onto its own block. They are now `<span role="button" tabindex="0">` with Enter/Space handling, and the passage flows. Breakdown rows got a gap so labels and percentages don't touch in narrow columns.
+- **Checks:**
+  - clean CI venv: 108 passed + 2 intended skips, coverage 88%
+  - dev venv: 111 passed
+  - web: lint / check / vitest / build exit 0
+  - packages job simulated in a fresh venv
+
+**Not done:** a Jenkins stage for the KServe transformer image waits on R4.
+
+**Original scope:**
 - GH Actions adds a frontend job (`npm ci`, `svelte-check`, `vitest`, `vite build`) and an SDK job (`pytest tests/sdk`). `tests/ml` stays opt-in because it needs `dvc pull`.
 - Jenkins builds the transformer image and deploys the updated model chart.
 

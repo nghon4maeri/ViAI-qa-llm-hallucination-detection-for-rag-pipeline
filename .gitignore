@@ -67,3 +67,8 @@ artifacts/local/
 *.pth
 *.pkl
 docs/.svelte-kit-old
+
+# Python package builds (pip install ./machine-learning, ./client-sdk/python)
+*.egg-info/
+machine-learning/build/
+client-sdk/python/build/

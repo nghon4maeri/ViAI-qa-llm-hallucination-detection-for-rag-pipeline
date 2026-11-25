@@ -13,9 +13,10 @@ os.environ["DISABLE_MODEL"] = "true"
 os.environ["ENABLE_TRACING"] = "false"
 os.environ["ENVIRONMENT"] = "test"
 
-# Gracefully mock optional ML or telemetry libraries if not installed in current test runner
+# Stand in for optional telemetry libraries the CI image may lack. ML libraries (torch, transformers,
+# lightgbm) are imported lazily by the code, so they are not mocked: a fake torch in sys.modules breaks
+# scikit-learn's array checks and turns importorskip("torch") into a silent pass.
 for mod in [
-    "torch", "torch.nn", "torch.nn.functional", "transformers", "lightgbm",
     "loguru", "prometheus_fastapi_instrumentator",
     "opentelemetry", "opentelemetry.trace", "opentelemetry.sdk",
     "opentelemetry.sdk.resources", "opentelemetry.sdk.trace",

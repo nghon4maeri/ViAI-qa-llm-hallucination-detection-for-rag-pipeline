@@ -22,6 +22,10 @@ REQUIRED = [
     "artifacts/models/metadata.yaml",
     "artifacts/models/phobert/model.safetensors",
 ]
+# Heavy ML stack: present in the training environment, not in the CI image
+for _lib in ("mlflow", "lightgbm", "torch", "transformers", "sklearn"):
+    pytest.importorskip(_lib)
+
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.slow,
