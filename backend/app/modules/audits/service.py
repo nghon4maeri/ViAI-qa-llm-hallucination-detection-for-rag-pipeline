@@ -20,6 +20,9 @@ from backend.app.evaluation.interfaces import EvaluationEngine
 from backend.app.evaluation.schemas import EvaluationInput
 from backend.app.evaluation.cache import evaluation_cache
 from backend.app.evaluation.rag import evaluate_rag
+from backend.app.evaluation.judge_agent import JudgeAgent, needs_judge
+from backend.app.evaluation.schemas import ClaimVerdict, RagEvaluationInput
+from backend.app.core.config import settings
 from backend.app.core.logging import logger
 from backend.app.core.metrics import record_evaluation_metric, record_feedback_metric
 
@@ -94,7 +97,32 @@ class AuditService:
             "claims": [c.model_dump() for c in result.claims],
             "faithfulness": result.faithfulness,
             "rag_metrics": result.metrics.model_dump(),
+            "judge": self._auto_judge(request, result.claims),
         }
+
+    def _auto_judge(self, request: RagEvaluationInput, claims: List[ClaimVerdict]) -> Optional[dict]:
+        if not (settings.JUDGE_AUTO_ESCALATE and needs_judge(claims)):
+            return None
+        try:
+            return JudgeAgent(self.engine).run(request, claims).model_dump()
+        except Exception as exc:
+            # Tier 2 is best-effort: a judge failure must not fail the Tier 1 audit
+            logger.warning(f"Judge escalation skipped: {exc}")
+            return None
+
+    async def judge_audit(self, audit_id: uuid.UUID, only_doubtful: bool = False) -> AuditResponse:
+        """Deep audit on demand. Raises LookupError (no audit), ValueError (not a completed RAG audit)."""
+        audit = self.repo.get_by_id(audit_id)
+        if not audit:
+            raise LookupError(f"Audit run {audit_id} not found")
+        if not audit.contexts or not audit.claims:
+            raise ValueError("Chỉ thẩm định sâu được audit RAG đã chấm xong")
+        payload = RagEvaluationInput(
+            question=audit.prompt, contexts=audit.contexts, answer=audit.response, ground_truth=audit.ground_truth
+        )
+        tier1 = [ClaimVerdict(**c) for c in audit.claims]
+        verdict = await run_in_threadpool(JudgeAgent(self.engine).run, payload, tier1, only_doubtful)
+        return AuditResponse.model_validate(self.repo.save_judge(audit_id, verdict.model_dump()))
 
     async def _run_audit(self, audit, evaluate: Callable[[], dict]) -> AuditResponse:
         start_time = time.perf_counter()

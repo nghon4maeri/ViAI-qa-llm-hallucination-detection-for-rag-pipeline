@@ -9,6 +9,7 @@
     import VerdictTag from './VerdictTag.svelte';
     import Breakdown from './Breakdown.svelte';
     import FeedbackPanel from './FeedbackPanel.svelte';
+    import JudgePanel from './JudgePanel.svelte';
     import { createEventDispatcher } from 'svelte';
 
     export let result: AuditResponse;
@@ -136,6 +137,8 @@
             {/each}
         </section>
     </div>
+
+    <JudgePanel bind:result {claims} />
 
     <FeedbackPanel {result} />
 

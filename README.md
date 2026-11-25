@@ -612,6 +612,12 @@ The response is a normal audit record plus:
 
 RAG audits appear in `GET /api/v1/audits` and accept feedback like any other audit.
 
+**Deep audit with the Claude judge agent** (Tier 2; needs `ANTHROPIC_API_KEY`):
+```bash
+curl -X POST "http://localhost:8080/api/v1/audits/<audit_id>/judge?only_doubtful=true"
+```
+The agent re-checks the sentences Tier 1 was unsure of, using the detector and a dose/number checker as tools, and stores `judge` on the audit: per-sentence verdicts with Vietnamese reasons and evidence, the tool-call trail, and token usage. Estimated cost on the default `claude-haiku-5-5` is about $0.0015 per deep audit; see `docs/IMPROVEMENT_ROADMAP.md` (Phase 2).
+
 **Evaluate a RAG dataset:** upload a `.jsonl` file to `POST /api/v1/batches/upload`, one turn per line:
 ```json
 {"question": "...", "contexts": ["chunk 1", "chunk 2"], "answer": "...", "ground_truth": "optional"}
@@ -661,6 +667,10 @@ curl $ISVC_URL/v2/models/hallucination-detector
 | `AWS_ACCESS_KEY_ID` | MinIO access key | `minio` |
 | `AWS_SECRET_ACCESS_KEY` | MinIO secret key | `minio123` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Jaeger OTLP endpoint | `http://jaeger:4317` |
+| `ANTHROPIC_API_KEY` | Claude API key for the Tier 2 judge agent (read by the SDK) | unset (judge returns 503) |
+| `JUDGE_MODEL` / `JUDGE_EFFORT` | Judge model and effort | `claude-haiku-5-5` / `low` (cheapest) |
+| `JUDGE_AUTO_ESCALATE` | Run the judge automatically on doubtful RAG audits (paid) | `false` |
+| `JUDGE_ESCALATE_BELOW` | Tier 1 confidence below which a claim is doubtful | `0.75` |
 
 **GKE cluster info:**
 - Cluster: `vihallu-cluster`

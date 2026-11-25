@@ -24,7 +24,7 @@ def split_claims(answer: str) -> List[str]:
     return claims[:MAX_CLAIMS] or [answer.strip()]
 
 
-def _evaluate_cached(engine: EvaluationEngine, context: str, prompt: str, response: str) -> EvaluationResult:
+def evaluate_cached(engine: EvaluationEngine, context: str, prompt: str, response: str) -> EvaluationResult:
     result = evaluation_cache.get(context, prompt, response)
     if result is None:
         result = engine.evaluate(EvaluationInput(context=context, prompt=prompt, response=response))
@@ -39,7 +39,7 @@ def _relatedness(result: EvaluationResult) -> float:
 
 
 def _judge_claim(engine: EvaluationEngine, claim: str, payload: RagEvaluationInput) -> Tuple[ClaimVerdict, str]:
-    results = [_evaluate_cached(engine, ctx, payload.question, claim) for ctx in payload.contexts]
+    results = [evaluate_cached(engine, ctx, payload.question, claim) for ctx in payload.contexts]
 
     supported = [i for i, r in enumerate(results) if r.label == "no"]
     if supported:

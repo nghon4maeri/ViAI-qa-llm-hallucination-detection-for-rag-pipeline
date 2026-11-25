@@ -34,6 +34,35 @@ export interface RagMetrics {
     context_recall?: number | null;
 }
 
+export interface ToolCallTrace {
+    name: string;
+    input: Record<string, unknown>;
+    output: unknown;
+    latency_ms: number;
+}
+
+export interface JudgeClaim {
+    index: number;
+    label: string;
+    reason: string;
+    evidence_index?: number | null;
+    agrees_with_tier1: boolean;
+}
+
+// Mirrors backend JudgeVerdict (Tier 2 Claude agent)
+export interface JudgeVerdict {
+    status: 'completed' | 'refused' | 'incomplete';
+    label?: string | null;
+    faithfulness?: number | null;
+    explanation?: string | null;
+    claims: JudgeClaim[];
+    tool_calls: ToolCallTrace[];
+    model: string;
+    input_tokens: number;
+    output_tokens: number;
+    latency_ms: number;
+}
+
 export interface RagInput {
     question: string;
     contexts: string[];
@@ -79,6 +108,7 @@ export interface AuditResponse {
     faithfulness?: number | null;
     ground_truth?: string | null;
     rag_metrics?: RagMetrics | null;
+    judge?: JudgeVerdict | null;
     context: string;
     prompt: string;
     response: string;
@@ -208,6 +238,19 @@ export const submitRagAudit = async (
         const errorBody = await res.json().catch(() => ({}));
         const detail = Array.isArray(errorBody.detail) ? errorBody.detail[0]?.msg : errorBody.detail;
         throw new Error(detail || `Lỗi hệ thống (${res.status})`);
+    }
+    return await res.json();
+};
+
+export const requestJudge = async (auditId: string, onlyDoubtful = true): Promise<AuditResponse> => {
+    const res = await fetch(`${AUDITS_URL}/${auditId}/judge?only_doubtful=${onlyDoubtful}`, {
+        method: 'POST',
+        headers: DEFAULT_HEADERS,
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Agent không chạy được (${res.status})`);
     }
     return await res.json();
 };

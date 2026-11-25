@@ -76,6 +76,43 @@ async def create_rag_audit(
         )
 
 
+def _judge_api_error(exc: Exception) -> Optional[HTTPException]:
+    """Map Claude API failures to HTTP errors; None when exc is not an API error."""
+    if isinstance(exc, ImportError):
+        return HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Chưa cài thư viện anthropic cho judge agent")
+    try:
+        import anthropic
+    except ImportError:
+        return None
+    if isinstance(exc, anthropic.AuthenticationError):
+        return HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Judge agent chưa có ANTHROPIC_API_KEY hợp lệ")
+    if isinstance(exc, anthropic.RateLimitError):
+        return HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Claude API đang giới hạn tốc độ, thử lại sau")
+    if isinstance(exc, (anthropic.APIStatusError, anthropic.APIConnectionError)):
+        return HTTPException(status.HTTP_502_BAD_GATEWAY, f"Claude API lỗi: {exc}")
+    return None
+
+
+@router.post("/{audit_id}/judge", response_model=AuditResponse)
+async def judge_audit(
+    audit_id: uuid.UUID,
+    only_doubtful: bool = Query(False, description="Chỉ gửi các câu Tier 1 không chắc (rẻ hơn)"),
+    service: AuditService = Depends(get_audit_service)
+):
+    """Tier 2 deep audit: a Claude agent re-checks the claims of a completed RAG audit with tool calls."""
+    try:
+        return await service.judge_audit(audit_id, only_doubtful=only_doubtful)
+    except LookupError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc))
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    except Exception as exc:
+        mapped = _judge_api_error(exc)
+        if mapped:
+            raise mapped
+        raise
+
+
 @router.get("", response_model=AuditListResponse)
 def list_audits(
     project_id: Optional[uuid.UUID] = Query(None, description="Filter by project ID"),

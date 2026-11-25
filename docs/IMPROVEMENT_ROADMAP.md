@@ -81,7 +81,41 @@ Original plan:
 - Metrics: faithfulness (share of claims labelled `no`), intrinsic/extrinsic breakdown, context relevance, answer relevance, context precision/recall when `ground_truth` exists.
 - Endpoints: `POST /api/v1/rag/evaluate`, `POST /api/v1/rag/batches` (JSONL/CSV).
 
-### Phase 2: LLM judge agent (tool calling)
+### Phase 2: LLM judge agent (tool calling) ✅ (built; not yet run against the live API)
+
+**Done (2026-11-25):**
+- `backend/app/evaluation/judge_agent.py` is the Tier 2 Claude agent. It is a manual tool loop (every call is recorded for the UI and traced with OpenTelemetry when available) and has three tools:
+  - `detect_hallucination(claim, context_index)`: the Tier 1 detector through `evaluation_cache`
+  - `check_numbers(claim, context_index)`: dose/duration/percentage comparison, digits inside names ignored
+  - `submit_verdict` (strict schema): ends the loop
+- Escalation:
+  - `POST /api/v1/audits/{id}/judge?only_doubtful=true|false` runs a deep audit on demand; the UI button sends `only_doubtful=true`.
+  - Automatic escalation runs when `JUDGE_AUTO_ESCALATE=true` **and** a claim has Tier 1 confidence below `JUDGE_ESCALATE_BELOW` (0.75) or a guardrail overrode LightGBM. It is off by default. A judge failure never fails the Tier 1 audit.
+- The verdict is stored in `audit_runs.judge` (migration `004`). Overall label and faithfulness use the Tier 1 aggregation rule, so the two tiers are comparable.
+- Refusals and incomplete runs leave Tier 1 standing (`status = refused | incomplete`).
+- UI: `JudgePanel.svelte` in the trace view shows the agent's summary, each overruled sentence (Tier 1 label struck through, new label, reason, evidence chunk), the tool-call trail, and the token usage.
+- Tests: `tests/unit/test_judge_agent.py` (8 tests) runs a scripted fake client, so it makes no API calls.
+
+**Cost-first configuration (user decision):**
+
+| Lever | Setting |
+|---|---|
+| Model | `claude-haiku-5-5` ($0.10 / $0.50 per 1M tokens, ~40x cheaper than `claude-opus-5-5` at $4 / $20) |
+| Effort | `low` |
+| Scope | Only the claims Tier 1 is unsure of; confident claims keep their Tier 1 label |
+| Prompt caching | Top-level `cache_control`. Each loop turn resends the history, so the cached prefix makes later turns ~10x cheaper on input. Haiku 5.5's minimum cacheable prefix is 512 tokens; system + tools is ~1.2k |
+| Escalation | On demand, or automatic only when `JUDGE_AUTO_ESCALATE=true` |
+
+Haiku 5.5 has no server-side refusal fallback, so the `fallbacks` parameter is sent only for models that support it (Opus 5.5 / Opus 5 / Fable 5.1 / Sonnet 5.5).
+
+**Estimated cost per escalation (not yet measured):** about 3 loop turns, ~8k input tokens in total (much of it cached) and ≤1.5k output tokens, gives **≈ $0.0015 on Haiku 5.5** (about $1.5 per 1,000 escalations) versus ≈ $0.06 on Opus 5.5. Verify against the `input_tokens` / `output_tokens` stored on each verdict once an API key is configured.
+
+**Next:**
+1. Run the judge on a ViMedHallu validation slice. Compare Tier 1 alone with Tier 1 + judge on F1, cost and latency, and log the results to MLflow.
+2. Raise the model or effort only if the measurement shows Haiku/low misses too much.
+3. A Batch API run (50% cheaper) for offline dataset benchmarks.
+
+**Original plan:**
 - Runs only when Tier 1 is unsure (low confidence, guardrail vs LightGBM conflict) or on "deep audit".
 - Tools wrap existing functions: `detect_hallucination`, `nli_check`, `extract_entities`, `find_supporting_chunk`, optional `web_search` (to separate *extrinsic but true* from *fabricated*).
 - Output: verdict, Vietnamese rationale, cited evidence. Every tool call is stored and traced.

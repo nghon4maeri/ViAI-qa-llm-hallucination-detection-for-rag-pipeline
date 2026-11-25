@@ -1,5 +1,5 @@
 # backend/app/evaluation/schemas.py
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -77,3 +77,32 @@ class RagEvaluationResult(BaseModel):
     claims: List[ClaimVerdict]
     metrics: RagMetrics
     model_version: str
+
+
+class ToolCallTrace(BaseModel):
+    name: str
+    input: Dict[str, Any]
+    output: Any
+    latency_ms: float
+
+
+class JudgeClaim(BaseModel):
+    index: int = Field(..., description="Index into the Tier 1 claims list")
+    label: str = Field(..., description="'no', 'intrinsic' or 'extrinsic'")
+    reason: str = Field(..., description="Why, in Vietnamese, citing the evidence")
+    evidence_index: Optional[int] = Field(None, description="Chunk that supports or contradicts the claim")
+    agrees_with_tier1: bool
+
+
+class JudgeVerdict(BaseModel):
+    """Tier 2 result. status != 'completed' means the agent gave no verdict and Tier 1 stands."""
+    status: str = Field(..., description="completed | refused | incomplete")
+    label: Optional[str] = None
+    faithfulness: Optional[float] = None
+    explanation: Optional[str] = None
+    claims: List[JudgeClaim] = Field(default_factory=list)
+    tool_calls: List[ToolCallTrace] = Field(default_factory=list)
+    model: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+    latency_ms: float = 0.0

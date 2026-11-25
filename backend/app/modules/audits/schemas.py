@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, field_validator
-from backend.app.evaluation.schemas import EvaluationBreakdown, ClaimVerdict, RagEvaluationInput, RagMetrics
+from backend.app.evaluation.schemas import EvaluationBreakdown, ClaimVerdict, JudgeVerdict, RagEvaluationInput, RagMetrics
 
 
 class AuditCreateRequest(BaseModel):
@@ -56,6 +56,7 @@ class AuditResponse(BaseModel):
     faithfulness: Optional[float] = None
     ground_truth: Optional[str] = None
     rag_metrics: Optional[RagMetrics] = None
+    judge: Optional[JudgeVerdict] = None
     context: str
     prompt: str
     response: str

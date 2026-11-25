@@ -68,7 +68,8 @@ class AuditRepository:
         completed_at: datetime,
         claims: Optional[List[Dict[str, Any]]] = None,
         faithfulness: Optional[float] = None,
-        rag_metrics: Optional[Dict[str, Any]] = None
+        rag_metrics: Optional[Dict[str, Any]] = None,
+        judge: Optional[Dict[str, Any]] = None
     ) -> AuditRunModel:
         audit = self.get_by_id(audit_id)
         if not audit:
@@ -80,11 +81,21 @@ class AuditRepository:
         audit.claims = claims
         audit.faithfulness = faithfulness
         audit.rag_metrics = rag_metrics
+        audit.judge = judge
         audit.model_version = model_version
         audit.latency_ms = latency_ms
         audit.status = "COMPLETED"
         audit.completed_at = completed_at
 
+        self.db.commit()
+        self.db.refresh(audit)
+        return audit
+
+    def save_judge(self, audit_id: uuid.UUID, judge: Dict[str, Any]) -> AuditRunModel:
+        audit = self.get_by_id(audit_id)
+        if not audit:
+            raise ValueError(f"Audit run {audit_id} not found")
+        audit.judge = judge
         self.db.commit()
         self.db.refresh(audit)
         return audit

@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     MODEL_PATH: str = os.getenv("MODEL_PATH", "models/phobert_finetuned_model")
     LGBM_MODEL_DIR: str = os.getenv("LGBM_MODEL_DIR", "models/lgbm")
 
+    # Tier 2 judge agent (Claude). The API key is read by the SDK (ANTHROPIC_API_KEY), never stored here.
+    # Cheapest current model by default (cost-first decision, 2026-11-25). Raise to claude-sonnet-5-5 /
+    # claude-opus-5-5 or effort medium/high if the ViMedHallu benchmark shows Haiku misses too much.
+    JUDGE_MODEL: str = os.getenv("JUDGE_MODEL", "claude-haiku-5-5")
+    JUDGE_EFFORT: str = os.getenv("JUDGE_EFFORT", "low")
+    JUDGE_MAX_STEPS: int = int(os.getenv("JUDGE_MAX_STEPS", "8"))
+    # Escalate a RAG audit when any Tier 1 claim is below this confidence or a guardrail overrode LightGBM
+    JUDGE_ESCALATE_BELOW: float = float(os.getenv("JUDGE_ESCALATE_BELOW", "0.75"))
+    # Off by default: every escalation is a paid API call
+    JUDGE_AUTO_ESCALATE: bool = os.getenv("JUDGE_AUTO_ESCALATE", "false").lower() == "true"
+
     # Observability & Tracing (Explicitly disabled by default for local development)
     ENABLE_TRACING: bool = os.getenv("ENABLE_TRACING", "false").lower() == "true"
     OTEL_EXPORTER_OTLP_ENDPOINT: str = os.getenv(
