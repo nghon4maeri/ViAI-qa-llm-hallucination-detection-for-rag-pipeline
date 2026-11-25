@@ -53,6 +53,8 @@ frontend/.vercel
 deploy/ci/**/secrets*
 deploy/ci/**/credentials*
 deploy/ci/kubeconfig*
+# Local secrets (TLS, basic-auth, kubeconfig copies); never committed
+deploy/secrets/
 config_flat
 auth-file.venv_mlflow/
 /models/*

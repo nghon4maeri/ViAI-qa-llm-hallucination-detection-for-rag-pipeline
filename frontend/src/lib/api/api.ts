@@ -193,9 +193,13 @@ const AUDITS_URL = `${API_BASE}/api/v1/audits`;
 const PROJECTS_URL = `${API_BASE}/api/v1/projects`;
 const BATCHES_URL = `${API_BASE}/api/v1/batches`;
 
+// Only local builds set a key (docker-compose); production builds ship none in the bundle
+const API_KEY: string = import.meta.env?.VITE_API_KEY || '';
+const AUTH_HEADERS: Record<string, string> = API_KEY ? { 'X-API-Key': API_KEY } : {};
+
 const DEFAULT_HEADERS: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-API-Key': 'vihallu-dev-key-local',
+    ...AUTH_HEADERS,
 };
 
 export const submitAudit = async (
@@ -332,9 +336,7 @@ export const uploadBatchCsv = async (
 
     const res = await fetch(`${BATCHES_URL}/upload`, {
         method: 'POST',
-        headers: {
-            'X-API-Key': 'vihallu-dev-key-local',
-        },
+        headers: AUTH_HEADERS,
         body: formData,
     });
 

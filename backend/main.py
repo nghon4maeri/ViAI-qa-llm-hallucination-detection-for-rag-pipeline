@@ -10,7 +10,8 @@ from backend.app.core.config import settings
 from backend.app.core.logging import logger
 from backend.app.core.database import SessionLocal, ensure_database_exists, engine
 from backend.app.models.base import Base
-from backend.app.modules.projects.router import ensure_default_project, router as projects_router
+from backend.app.modules.projects.router import router as projects_router
+from backend.app.modules.projects.service import ensure_default_project
 from backend.app.modules.audits.router import router as audits_router
 from backend.app.modules.batches.router import router as batches_router
 from backend.app.modules.api_keys.router import router as api_keys_router

@@ -11,7 +11,7 @@ from backend.app.core.config import settings
 from backend.app.core.logging import logger
 from backend.app.models.api_key import ApiKeyModel
 from backend.app.models.project import ProjectModel
-from backend.app.modules.projects.router import ensure_default_project
+from backend.app.modules.projects.service import ensure_default_project
 
 
 def generate_raw_api_key() -> str:

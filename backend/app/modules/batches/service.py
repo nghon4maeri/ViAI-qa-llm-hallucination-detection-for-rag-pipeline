@@ -11,8 +11,8 @@ from starlette.concurrency import run_in_threadpool
 
 from backend.app.models.batch import AuditBatchModel
 from backend.app.models.audit import AuditRunModel
-from backend.app.models.project import ProjectModel
 from backend.app.core.config import settings
+from backend.app.modules.projects.service import ensure_default_project
 from backend.app.core.database import SessionLocal
 from backend.app.evaluation.interfaces import EvaluationEngine
 from backend.app.evaluation.schemas import EvaluationInput, RagEvaluationInput
@@ -35,19 +35,7 @@ class BatchService:
         self.session_factory = session_factory or SessionLocal
 
     def get_or_create_default_project(self) -> uuid.UUID:
-        stmt = select(ProjectModel).where(ProjectModel.is_default == True).limit(1)
-        project = self.db.execute(stmt).scalar_one_or_none()
-        if not project:
-            project = ProjectModel(
-                name=settings.DEFAULT_PROJECT_NAME,
-                slug=settings.DEFAULT_PROJECT_SLUG,
-                description="Default workspace automatically provisioned for audits",
-                is_default=True
-            )
-            self.db.add(project)
-            self.db.commit()
-            self.db.refresh(project)
-        return project.id
+        return ensure_default_project(self.db).id
 
     def create_batch(
         self,

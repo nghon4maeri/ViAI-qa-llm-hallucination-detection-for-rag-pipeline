@@ -1,6 +1,6 @@
 # Refactor Plan: Main Folders, Same Stack and Architecture
 
-**Status:** proposed (2026-11-25), not started
+**Status:** R1 done (2026-11-25); R2–R6 not started
 **Constraint:** keep the tech stack and the architecture in the README: FastAPI + NGINX, PyTorch/HF + LightGBM, MLflow + DVC + MinIO/GCS, KServe/MLServer, Docker/Helm/GKE, Terraform/Ansible, GitHub Actions + Jenkins, Prometheus/Grafana/Loki/Jaeger/Evidently, SvelteKit. Nothing is removed. Code is moved, deduplicated, or wired up to match the design.
 
 ## 1. Why
@@ -65,7 +65,21 @@ vietnamese-llm-hallucination-detection/
 
 Each phase is one commit (or PR). The full test suite and `svelte-check` must pass before the next phase starts, and every moved path is found with `git grep` across CI, Jenkins, Compose, Helm, Ansible, DVC and docs, as in Phase 0.
 
-### R1 Hygiene (no moves, low risk)
+### R1 Hygiene (no moves, low risk) ✅
+
+**Done:**
+- Deleted dead code: `inference/mlflow_loader.py`, `utils/preprocessing.py` (+ 5 tests that only covered it), `utils/logger.py`, `frontend/src/lib/stores/index.ts`. Removed the empty `notebooks/`.
+- Default-project logic now lives only in `projects/service.ensure_default_project`. The repository and batch methods are one-line delegates.
+- Model configuration moved into `Settings`: `PHOBERT_MODEL` / `PHOBERT_TOKENIZER`, `NLI_MODEL_NAME`, `NER_MODEL_NAME` / `NER_FALLBACK_MODEL`, `LLM_FEATURE_MODEL`, `HF_TOKEN`. The unused `MODEL_PATH` was removed.
+  - `backend/.env` is now loaded by explicit path. Before, it was never actually read: the current python-dotenv resolves from the working directory, so `HF_TOKEN` was silently unset.
+- 18 `print()` calls in `inference_model.py` → `logger`.
+- Frontend API key comes from `VITE_API_KEY`. `docker-compose.yml` sets the local gateway dev key; production builds ship none.
+- `page.svelte.spec.ts` rewritten for jsdom (Svelte `mount`, offline `fetch`), with `resolve.conditions: ['browser']` under Vitest. Frontend tests: 5/5.
+- README: tech-stack rows fixed, plus a "research model vs served model" note.
+- `tls.crt`, `tls.key`, `auth-file`, `config_flat` → `deploy/secrets/` (git-ignored, permissions kept). Use `--from-file=deploy/secrets/auth-file` when creating the ingress basic-auth secret.
+- Checks: backend 102 passed (107 − the 5 deleted preprocessing tests), `svelte-check` 0, `vite build` OK, `docker compose config` OK.
+
+**Original scope:**
 - Delete dead code: `mlflow_loader.py`, `utils/preprocessing.py` + its test, `setup_logging`, `stores/index.ts`. Fix or replace `page.svelte.spec.ts`.
 - Move the default-project logic into `projects` (one function); audits and batches call it.
 - Move every `os.getenv` in `inference_model.py` into `Settings`, and replace `print()` with `logger`.

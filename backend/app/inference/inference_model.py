@@ -1,7 +1,9 @@
 import os
 import numpy as np
-from dotenv import load_dotenv
 from typing import TYPE_CHECKING, Dict, Any, Union
+
+from backend.app.core.config import settings
+from backend.app.core.logging import logger
 
 if TYPE_CHECKING:
     import torch
@@ -12,21 +14,15 @@ if TYPE_CHECKING:
         Pipeline as HFPipeline
     )
 
-load_dotenv()
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-MODEL_PATH = os.getenv("MODEL_PATH", "models/phobert_finetuned_model")
-PHOBERT_FINETUNED_PATH = "vinai/phobert-base"
-LGBM_DIR = os.getenv("LGBM_MODEL_DIR", os.path.join(BASE_DIR, "models/lgbm"))
+LGBM_DIR = os.path.join(BASE_DIR, settings.LGBM_MODEL_DIR)  # join keeps an absolute setting as is
 # Written by ml/pipelines/train.py next to the fold models
 EMBED_CENTROID_PATH = os.path.join(LGBM_DIR, "embedding_centroid.npy")
 FEATURE_SCHEMA_PATH = os.path.join(BASE_DIR, "models/feature_schema.json")
-NLI_MODEL_NAME = "MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli"
-NER_MODEL_NAME = "undertheseanlp/vietnamese-ner-v1.4.0a2"
-VISTRAL_MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
-
-DISABLE_MODEL = os.getenv("DISABLE_MODEL", "false").lower() == "true"
+NLI_MODEL_NAME = settings.NLI_MODEL_NAME
+NER_MODEL_NAME = settings.NER_MODEL_NAME
+VISTRAL_MODEL_NAME = settings.LLM_FEATURE_MODEL
 
 
 class HallucinationPipeline:
@@ -37,7 +33,7 @@ class HallucinationPipeline:
     }
 
     def __init__(self):
-        self.disabled = DISABLE_MODEL
+        self.disabled = settings.DISABLE_MODEL
         self._is_loaded = False
         
         self.labels = {
@@ -63,7 +59,7 @@ class HallucinationPipeline:
         if self._is_loaded or self.disabled:
             return
 
-        print("Initializing HallucinationPipeline Resources (Lazy Loading)...")
+        logger.info("Initializing HallucinationPipeline Resources (Lazy Loading)...")
         
         import torch
         import torch.nn.functional as F
@@ -80,29 +76,28 @@ class HallucinationPipeline:
         self.torch_module = torch 
         self.device_cpu = torch.device("cpu")
 
-        hf_token = os.getenv("HF_TOKEN")
-        if hf_token:
-            login(token=hf_token)
+        if settings.HF_TOKEN:
+            login(token=settings.HF_TOKEN)
 
         try:
-            print(f"- Loading PhoBERT (CPU)...")
-            self.embed_tokenizer = AutoTokenizer.from_pretrained(PHOBERT_FINETUNED_PATH)
-            self.embed_model = AutoModel.from_pretrained(PHOBERT_FINETUNED_PATH).to(self.device_cpu).eval()
+            logger.info(f"- Loading PhoBERT (CPU)...")
+            self.embed_tokenizer = AutoTokenizer.from_pretrained(settings.PHOBERT_TOKENIZER)
+            self.embed_model = AutoModel.from_pretrained(settings.PHOBERT_MODEL).to(self.device_cpu).eval()
 
-            print(f"- Loading NLI (CPU)...")
+            logger.info(f"- Loading NLI (CPU)...")
             self.nli_tokenizer = AutoTokenizer.from_pretrained(NLI_MODEL_NAME)
             self.nli_model = AutoModelForSequenceClassification.from_pretrained(NLI_MODEL_NAME).to(self.device_cpu).eval()
 
-            print(f"- Loading NER (CPU)...")
+            logger.info(f"- Loading NER (CPU)...")
             try:
                 self.ner_pipeline = pipeline("ner", model=NER_MODEL_NAME, tokenizer=NER_MODEL_NAME, 
                                              device=-1, aggregation_strategy="simple")
             except Exception:
-                fallback = "NlpHUST/ner-bert-base"
+                fallback = settings.NER_FALLBACK_MODEL
                 self.ner_pipeline = pipeline("ner", model=fallback, tokenizer=fallback, 
                                              device=-1, aggregation_strategy="simple")
 
-            print(f"- Loading Qwen 1.5B (CPU Optimized)...")
+            logger.info(f"- Loading Qwen 1.5B (CPU Optimized)...")
             
             self.vistral_tokenizer = AutoTokenizer.from_pretrained(VISTRAL_MODEL_NAME)
             self.vistral_model = AutoModelForCausalLM.from_pretrained(
@@ -112,14 +107,14 @@ class HallucinationPipeline:
                 low_cpu_mem_usage=True
             )
 
-            print(f"- Loading LightGBM fold ensemble...")
+            logger.info(f"- Loading LightGBM fold ensemble...")
             self._load_lgbm_ensemble()
 
             self._is_loaded = True
-            print("System Ready!")
+            logger.info("System Ready!")
 
         except Exception as e:
-            print(f"Critical Error loading models: {e}")
+            logger.error(f"Critical error loading models: {e}")
             raise e
 
     def _load_lgbm_ensemble(self):
@@ -294,7 +289,7 @@ class HallucinationPipeline:
         if not self._is_loaded:
             self._load_models()
 
-        print("\n--- PROCESSING REQUEST (GUARDRAIL V3: EXTRINSIC HUNTER) ---")
+        logger.info("\n--- PROCESSING REQUEST (GUARDRAIL V3: EXTRINSIC HUNTER) ---")
         c, p, r = str(context).strip(), str(prompt).strip(), str(response).strip()
 
         f_embed = self._extract_embeddings([f"{c} {p} {r}"])
@@ -302,16 +297,16 @@ class HallucinationPipeline:
         # NLI / NER are not LightGBM features; they drive the guardrails and the breakdown
         p_entail, p_neutral, p_contra = self._get_nli_features(c, r)
         
-        print(f"- [NLI Debug] Contra (Int): {p_contra:.4f} | Neu (Ext): {p_neutral:.4f} | Entail (No): {p_entail:.4f}")
+        logger.info(f"- [NLI Debug] Contra (Int): {p_contra:.4f} | Neu (Ext): {p_neutral:.4f} | Entail (No): {p_entail:.4f}")
 
         f_ner = self._get_ner_features(c, r)
         new_entity_count = f_ner[0][0]
         overlap_ratio = f_ner[0][1]
-        print(f"- [NER Debug] New Entities: {new_entity_count} | Overlap: {overlap_ratio:.2f}")
+        logger.info(f"- [NER Debug] New Entities: {new_entity_count} | Overlap: {overlap_ratio:.2f}")
 
-        print("- Asking Vistral...")
+        logger.info("- Asking Vistral...")
         f_vistral = self._get_vistral_probs(c, p, r)
-        print(f"- [Vistral Debug] Ext: {f_vistral[0][0]:.4f} | Int: {f_vistral[0][1]:.4f} | No: {f_vistral[0][2]:.4f}")
+        logger.info(f"- [Vistral Debug] Ext: {f_vistral[0][0]:.4f} | Int: {f_vistral[0][1]:.4f} | No: {f_vistral[0][2]:.4f}")
 
         # f_vistral is [ext, int, no]; training column order is [no, ext, int]
         x_final = self._build_model_features(f_embed, c, p, r, f_vistral[:, [2, 0, 1]])
@@ -320,32 +315,32 @@ class HallucinationPipeline:
         class_id = np.argmax(preds[0])
         confidence = preds[0][class_id]
         original_label = self.labels.get(int(class_id), "Unknown")
-        print(f"- [LightGBM Opinion] Label: {original_label} ({confidence:.4f})")
+        logger.info(f"- [LightGBM Opinion] Label: {original_label} ({confidence:.4f})")
 
         active_guardrail = None
 
         if p_contra > 0.5:
-            print("GUARDRAIL: NLI Contradiction cao -> Force Intrinsic")
+            logger.info("GUARDRAIL: NLI Contradiction cao -> Force Intrinsic")
             final_label = self._normalize_label("Intrinsic Hallucination")
             final_conf = float(p_contra)
             active_guardrail = "NLI_CONTRADICTION_HIGH"
         elif p_neutral > 0.45 and p_entail < 0.5:
-            print("GUARDRAIL: NLI Neutral cao (Thong tin ngoai le) -> Force Extrinsic")
+            logger.info("GUARDRAIL: NLI Neutral cao (Thong tin ngoai le) -> Force Extrinsic")
             final_label = self._normalize_label("Extrinsic Hallucination")
             final_conf = float(p_neutral)
             active_guardrail = "NLI_NEUTRAL_HIGH"
         elif new_entity_count >= 1 and class_id == 1 and p_entail < 0.9:
-            print("GUARDRAIL: Có thuc the la va Entailment khong tuyet doi -> Force Extrinsic")
+            logger.info("GUARDRAIL: Có thuc the la va Entailment khong tuyet doi -> Force Extrinsic")
             final_label = "extrinsic"
             final_conf = 0.85
             active_guardrail = "NEW_ENTITY_MISMATCH"
         elif f_vistral[0][0] > 0.6:
-            print("GUARDRAIL: Vistral vote Extrinsic rat cao -> Force Extrinsic")
+            logger.info("GUARDRAIL: Vistral vote Extrinsic rat cao -> Force Extrinsic")
             final_label = "extrinsic"
             final_conf = float(f_vistral[0][0])
             active_guardrail = "VISTRAL_EXTRINSIC_HIGH"
         elif p_contra > 0.35 and class_id == 1:
-            print("Soft Warning: Co tin hieu mau thuan nhe. Tra ve Intrinsic.")
+            logger.info("Soft Warning: Co tin hieu mau thuan nhe. Tra ve Intrinsic.")
             final_label = "intrinsic"
             final_conf = float(p_contra)
             active_guardrail = "SOFT_CONTRADICTION"

@@ -2,6 +2,13 @@
 import os
 from typing import List, Union
 
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# backend/.env (local secrets such as HF_TOKEN), whatever the working directory; real env vars win
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
 try:
     from pydantic_settings import BaseSettings, SettingsConfigDict
     _USE_PYDANTIC_SETTINGS = True
@@ -31,8 +38,15 @@ class Settings(BaseSettings):
     # Model Serving
     DISABLE_MODEL: bool = os.getenv("DISABLE_MODEL", "false").lower() == "true"
     MODEL_VERSION: str = os.getenv("MODEL_VERSION", "1.0.0")
-    MODEL_PATH: str = os.getenv("MODEL_PATH", "models/phobert_finetuned_model")
-    LGBM_MODEL_DIR: str = os.getenv("LGBM_MODEL_DIR", "models/lgbm")
+    LGBM_MODEL_DIR: str = os.getenv("LGBM_MODEL_DIR", "models/lgbm")  # relative to the repo root
+    PHOBERT_MODEL: str = os.getenv("PHOBERT_MODEL", "vinai/phobert-base")
+    PHOBERT_TOKENIZER: str = os.getenv("PHOBERT_TOKENIZER", os.getenv("PHOBERT_MODEL", "vinai/phobert-base"))
+    NLI_MODEL_NAME: str = os.getenv("NLI_MODEL_NAME", "MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli")
+    NER_MODEL_NAME: str = os.getenv("NER_MODEL_NAME", "undertheseanlp/vietnamese-ner-v1.4.0a2")
+    NER_FALLBACK_MODEL: str = os.getenv("NER_FALLBACK_MODEL", "NlpHUST/ner-bert-base")
+    # Source of the 3 prob_* LightGBM features (training used precomputed Vistral probabilities)
+    LLM_FEATURE_MODEL: str = os.getenv("LLM_FEATURE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+    HF_TOKEN: str = os.getenv("HF_TOKEN", "")
 
     # Tier 2 judge agent (Claude). The API key is read by the SDK (ANTHROPIC_API_KEY), never stored here.
     # Cheapest current model by default (cost-first decision, 2026-11-25). Raise to claude-sonnet-5-5 /

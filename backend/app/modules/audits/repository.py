@@ -6,9 +6,9 @@ from typing import Optional, List, Tuple, Dict, Any
 from sqlalchemy import select, func, desc
 from sqlalchemy.orm import Session, joinedload
 from backend.app.models.audit import AuditRunModel
-from backend.app.models.project import ProjectModel
 from backend.app.models.feedback import AuditFeedbackModel
 from backend.app.core.config import settings
+from backend.app.modules.projects.service import ensure_default_project
 
 
 class AuditRepository:
@@ -16,20 +16,7 @@ class AuditRepository:
         self.db = db
 
     def get_or_create_default_project(self) -> uuid.UUID:
-        """Fetch or create the system default workspace project."""
-        stmt = select(ProjectModel).where(ProjectModel.is_default == True).limit(1)
-        project = self.db.execute(stmt).scalar_one_or_none()
-        if not project:
-            project = ProjectModel(
-                name=settings.DEFAULT_PROJECT_NAME,
-                slug=settings.DEFAULT_PROJECT_SLUG,
-                description="Default workspace automatically provisioned for audits",
-                is_default=True
-            )
-            self.db.add(project)
-            self.db.commit()
-            self.db.refresh(project)
-        return project.id
+        return ensure_default_project(self.db).id
 
     def create_pending_audit(
         self,

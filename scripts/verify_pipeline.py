@@ -72,7 +72,6 @@ def check_local_files():
         "ml/pipelines/infer.py",
         "ml/pipelines/promote.py",
         "scripts/pull_model_from_registry.py",
-        "backend/app/inference/mlflow_loader.py",
         "data/vihallu-dataset/vihallu-train.csv",
         "data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv",
     ]

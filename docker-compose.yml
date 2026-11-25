@@ -133,6 +133,7 @@ services:
       - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost
+      - VITE_API_KEY=vihallu-dev-key-local  # local gateway dev key (deploy/nginx/api_keys.conf)
     depends_on:
       - backend
     networks:

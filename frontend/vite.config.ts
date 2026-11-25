@@ -16,6 +16,8 @@ export default defineConfig({
             usePolling: true
         }
     },
+    // jsdom tests mount components, so Svelte must resolve to its browser build there (not in the app build)
+    resolve: process.env.VITEST ? { conditions: ['browser'] } : undefined,
     test: {
         environment: 'jsdom',
         globals: true,

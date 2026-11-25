@@ -62,9 +62,12 @@ MLflow uses a managed PostgreSQL instance hosted on **Google Cloud SQL**.
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
 | **ML Framework** | PyTorch, HuggingFace Transformers | Model fine-tuning and inference |
-| **Backbone Models** | Qwen2.5-1.5B, DeBERTa-v3-large | Embedding and NLI features |
+| **Backbone Models** | PhoBERT-base, DeBERTa-v3-large, Qwen2.5-1.5B | Embeddings (served model), NLI guardrails, LLM-probability features |
 | **NER** | undertheseanlp/vietnamese-ner | Named entity extraction |
 | **Ensemble** | LightGBM | Final classification |
+| **Judge Agent** | Claude API (`claude-haiku-5-5` by default) | Tier 2 deep audit with tool calling |
+| **Agent Integration** | MCP (Python SDK), `viai_qa` client | RAG pipelines and agents call ViAI-QA |
+| **Frontend** | SvelteKit, Tailwind CSS | RAG trace view, audits, datasets |
 | **Experiment Tracking** | MLflow | Metrics, artifacts, model registry |
 | **Data Versioning** | DVC | Dataset & pipeline versioning |
 | **Artifact Storage** | MinIO (local) / GCS (production) | Model and data storage |
@@ -164,6 +167,14 @@ To effectively detect and classify hallucinations, this project proposes a **mul
 
 ![Training](docs/images/training-pipeline.png)
 ### Feature Groups
+
+> **Research model vs served model.** The groups below describe the competition model built in `ml/notebooks/`. The model the DVC pipeline trains and the API serves (`ml/pipelines/train.py`, 778 features, OOF Macro-F1 0.8634) is simpler:
+> - mean-pooled **PhoBERT-base** embeddings (768)
+> - statistical features (6)
+> - cosine similarity to the training-set centroid (1)
+> - three LLM-probability features (3)
+>
+> NLI and NER run at serving time as **guardrails and explanations**, not as LightGBM inputs. See [docs/PHASE_0_FOUNDATION_FIX_REPORT.md](docs/PHASE_0_FOUNDATION_FIX_REPORT.md).
 
 **1. Fine-tuned Qwen2.5-1.5B Embeddings**
 

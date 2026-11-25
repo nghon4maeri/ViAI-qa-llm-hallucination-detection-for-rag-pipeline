@@ -1,14 +1,25 @@
-import { page } from '@vitest/browser/context';
-import { describe, it, expect } from 'vitest';
-import { render } from 'vitest-browser-svelte';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { mount, unmount, flushSync } from 'svelte';
 import Page from './+page.svelte';
 
 describe('+page.svelte', () => {
-    it('renders header h1', async () => {
-        const { getByRole } = render(Page);
-        
-        const heading = getByRole('heading', { level: 1, name: /HalluDetector/i });
-        
-        expect(heading).toBeTruthy();
+    let app: Record<string, any> | undefined;
+
+    afterEach(() => {
+        if (app) unmount(app);
+        vi.unstubAllGlobals();
+        document.body.innerHTML = '';
+    });
+
+    it('renders the app shell with the RAG check as the default tab', () => {
+        // No backend in unit tests: every API call fails and the page must still render
+        vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+        app = mount(Page, { target: document.body });
+        flushSync();
+
+        expect(document.querySelector('h1')?.textContent).toBe('ViAI-QA');
+        const current = document.querySelector('nav [aria-current="page"]');
+        expect(current?.textContent?.trim()).toBe('Kiểm tra RAG');
+        expect(document.body.textContent).toContain('Câu hỏi của người dùng');
     });
 });
