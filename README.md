@@ -555,6 +555,8 @@ MLflow — experiment runs comparing fold metrics:
 - Model: `vihallu-detector` v2.1
 - Alias: `production`
 
+**Features** come from one package, `machine-learning/vihallu_features`, which training, batch inference and the API all import, so the 778-feature layout cannot drift between them.
+
 **Check train/serve feature parity and the OOF score** (needs `dvc pull`):
 ```bash
 make test-ml

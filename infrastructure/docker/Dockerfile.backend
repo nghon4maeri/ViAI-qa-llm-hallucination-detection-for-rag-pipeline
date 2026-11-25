@@ -26,6 +26,11 @@ RUN pip install --upgrade pip && \
       mlflow==2.11.3 && \
     pip install --no-cache-dir -r requirements-serving.txt
 
+# Shared feature builder, the same package training uses
+COPY machine-learning/pyproject.toml machine-learning/pyproject.toml
+COPY machine-learning/vihallu_features machine-learning/vihallu_features
+RUN pip install --no-cache-dir ./machine-learning
+
 COPY applications/api/backend backend
 COPY applications/api/alembic.ini alembic.ini
 RUN mkdir -p /app/models /app/predictions

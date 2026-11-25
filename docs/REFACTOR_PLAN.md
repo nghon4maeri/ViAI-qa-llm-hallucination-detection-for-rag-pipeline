@@ -1,6 +1,6 @@
 # Refactor Plan: Main Folders, Same Stack and Architecture
 
-**Status:** R1 and R3 done (2026-11-25), folders renamed; R2, R4–R6 not started
+**Status:** R1, R2 and R3 done (2026-11-25), folders renamed; R4–R6 not started
 **Constraint:** keep the tech stack and the architecture in the README: FastAPI + NGINX, PyTorch/HF + LightGBM, MLflow + DVC + MinIO/GCS, KServe/MLServer, Docker/Helm/GKE, Terraform/Ansible, GitHub Actions + Jenkins, Prometheus/Grafana/Loki/Jaeger/Evidently, SvelteKit. Nothing is removed. Code is moved, deduplicated, or wired up to match the design.
 
 ## 1. Why
@@ -87,7 +87,19 @@ Each phase is one commit (or PR). The full test suite and `svelte-check` must pa
 - README tech-stack row fixed (PhoBERT embedding, DeBERTa NLI, Qwen LLM-probability features, Claude judge).
 - Root secrets (`tls.*`, `auth-file`, `config_flat`) move to `deploy/secrets/` (git-ignored); empty `notebooks/` removed.
 
-### R2 One feature builder (removes the skew class of bugs)
+### R2 One feature builder (removes the skew class of bugs) ✅
+
+**Done:**
+- `machine-learning/vihallu_features/` is an installable package (`pip install ./machine-learning`, numpy + scikit-learn only). It holds `FEATURE_GROUPS`/`FEATURE_DIM`, `LABEL_MAP`/`LABELS`, `LLM_PROB_COLUMNS`, `normalize`, `embedding_text`, `masked_mean`, `simple_features`, `centroid_cosine` and `build_feature_matrix`.
+- `train.py`, `infer.py`, `embed.py`, `evaluate_detector.py` and `HallucinationPipeline` all import it. The four private copies (`simple_feats`, `build_cosine_sim`, `_feat_engineer_simple`, inline pooling) are gone.
+- A third skew closed at the root: serving stripped whitespace and training did not. `normalize` (strip) now lives in the package for both. No ViHallu training row changes under strip, which was checked before making the change.
+- `infer.py` now uses the saved `embedding_centroid.npy`, the same one serving uses, instead of recomputing it.
+- Installed in the API image (`Dockerfile.backend`), on Render (`buildCommand`) and in `make install`. Tests and CI find it through `pythonpath` / `PYTHONPATH`.
+- **Verification:**
+  - The feature matrix from the new `train.py` is bitwise identical (`np.array_equal`) to the matrix from the pre-R2 commit. The `infer.py` path with the saved centroid is also bitwise identical.
+  - `tests/ml/test_feature_parity.py` (real PhoBERT through the serving path + OOF 0.8634) passes, plus 7 new unit tests in `tests/ml/test_vihallu_features.py`. Full suite: 111 passed.
+
+**Original scope:**
 - `ml/vihallu_features/`: `build_features(embedding, context, prompt, response, llm_probs, centroid) -> np.ndarray[778]`, the `FEATURE_ORDER` constant, and masked-mean pooling.
 - `train.py`, `infer.py` and `HallucinationPipeline` all import it. The parity test then checks one function against the stored matrix.
 - The API image installs it as a local package. The ML code keeps its own requirements, and the API does not import pipeline scripts.

@@ -22,9 +22,10 @@ import pandas as pd
 from sklearn.metrics import classification_report, f1_score
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path[:0] = [ROOT, os.path.join(ROOT, "applications", "api")]  # repo root and the `backend` package
+sys.path[:0] = [os.path.join(ROOT, "machine-learning"), os.path.join(ROOT, "applications", "api")]  # vihallu_features, backend
+import vihallu_features as vf  # noqa: E402
 
-LABELS = ["extrinsic", "no", "intrinsic"]  # class ids 0, 1, 2 (artifacts/models/feature_schema.json)
+LABELS = vf.LABELS  # class ids 0, 1, 2
 
 
 def load_pipeline():
@@ -85,7 +86,7 @@ def main():
     X = []
     for r, (_, pr) in zip(df.itertuples(index=False), probs.iterrows()):
         c, p, resp = str(r.context).strip(), str(r.prompt).strip(), str(r.response).strip()
-        f_embed = pipeline._extract_embeddings([f"{c} {p} {resp}"])
+        f_embed = pipeline._extract_embeddings([vf.embedding_text(c, p, resp)])
         X.append(pipeline._build_model_features(
             f_embed, c, p, resp, np.array([[pr.prob_no, pr.prob_extrinsic, pr.prob_intrinsic]])
         )[0])

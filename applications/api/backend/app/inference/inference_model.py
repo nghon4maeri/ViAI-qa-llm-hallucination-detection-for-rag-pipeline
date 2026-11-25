@@ -2,6 +2,8 @@ import os
 import numpy as np
 from typing import TYPE_CHECKING, Dict, Any, Union
 
+import vihallu_features as vf
+
 from backend.app.core.config import settings
 from backend.app.core.logging import logger
 
@@ -129,15 +131,9 @@ class HallucinationPipeline:
             self.feature_dim = json.load(f)["feature_dim"]
 
     def _build_model_features(self, f_embed, context, prompt, response, vistral_no_ext_int):
-        """
-        Must mirror build_feature_matrix() in machine-learning/pipelines/train.py:
-        [phobert(768), simple(6), cosine(embedding vs train centroid)(1), prob_no/ext/int(3)].
-        """
-        from sklearn.metrics.pairwise import cosine_similarity
-
-        f_simple = self._feat_engineer_simple(context, prompt, response)
-        f_sim = cosine_similarity(f_embed, self.embed_centroid)
-        x = np.hstack([f_embed, f_simple, f_sim, vistral_no_ext_int])
+        """Same builder as training (vihallu_features); vistral_no_ext_int follows vf.LLM_PROB_COLUMNS."""
+        x = vf.build_feature_matrix(f_embed, [context], [prompt], [response], vistral_no_ext_int, self.embed_centroid)
+        # The artifact on disk must have been trained on this layout
         if x.shape[1] != self.feature_dim:
             raise ValueError(f"Feature dim mismatch: got {x.shape[1]}, expected {self.feature_dim}")
         return x
@@ -149,21 +145,11 @@ class HallucinationPipeline:
     def _extract_embeddings(self, text_list):
         import torch 
         
-        inputs = self.embed_tokenizer(text_list, padding=True, truncation=True, max_length=256, return_tensors="pt").to(self.device_cpu)
+        inputs = self.embed_tokenizer(text_list, padding=True, truncation=True, max_length=vf.MAX_LENGTH, return_tensors="pt").to(self.device_cpu)
         with torch.no_grad():
             outputs = self.embed_model(**inputs)
-            # Masked mean: padding must not leak into the embedding (same as embed_phobert.py)
-            mask = inputs["attention_mask"].unsqueeze(-1).float()
-            embeddings = ((outputs.last_hidden_state * mask).sum(dim=1) / mask.sum(dim=1)).cpu().numpy()
+            embeddings = vf.masked_mean(outputs.last_hidden_state, inputs["attention_mask"]).cpu().numpy()
         return embeddings
-
-    def _feat_engineer_simple(self, context, prompt, response):
-        feats = []
-        for text in [context, prompt, response]:
-            s = str(text) if text else ""
-            feats.append(len(s))
-            feats.append(len(s.split()))
-        return np.array([feats])
 
     def _get_entity_set(self, text):
         if not text: return set()
@@ -290,7 +276,7 @@ class HallucinationPipeline:
         logger.info("\n--- PROCESSING REQUEST (GUARDRAIL V3: EXTRINSIC HUNTER) ---")
         c, p, r = str(context).strip(), str(prompt).strip(), str(response).strip()
 
-        f_embed = self._extract_embeddings([f"{c} {p} {r}"])
+        f_embed = self._extract_embeddings([vf.embedding_text(c, p, r)])
 
         # NLI / NER are not LightGBM features; they drive the guardrails and the breakdown
         p_entail, p_neutral, p_contra = self._get_nli_features(c, r)

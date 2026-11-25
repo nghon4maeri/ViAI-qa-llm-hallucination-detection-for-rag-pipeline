@@ -3,7 +3,7 @@
 PY ?= python
 
 install:          ## Dev dependencies
-	$(PY) -m pip install -r requirements/dev.txt
+	$(PY) -m pip install -r requirements/dev.txt -e ./machine-learning
 
 test:             ## Fast tests (no model weights needed)
 	$(PY) -m pytest -m "not slow"

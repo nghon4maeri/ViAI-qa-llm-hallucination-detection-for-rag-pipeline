@@ -6,13 +6,17 @@ Mirrors feature engineering from train.py exactly.
 """
 
 import os
+import sys
 import json
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
 import mlflow
 from pathlib import Path
-from sklearn.metrics.pairwise import cosine_similarity
+
+# Shared feature builder; works installed (pip install ./machine-learning) or straight from the checkout
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import vihallu_features as vf  # noqa: E402
 
 
 EMB_PATH            = "artifacts/features/phobert_embeddings.npy"
@@ -22,21 +26,7 @@ MODEL_DIR           = Path("artifacts/models/lgbm")
 FEATURE_SCHEMA_PATH = "artifacts/models/feature_schema.json"
 OUT_PATH            = "artifacts/predictions/vihallu_infer_predictions.csv"
 
-LABELS = ["extrinsic", "no", "intrinsic"]
-
-
-def simple_feats(c: str, p: str, r: str) -> list:
-    """6-dim: [char_len, word_count] for context / prompt / response."""
-    feats = []
-    for t in [c, p, r]:
-        t = str(t)
-        feats.extend([len(t), len(t.split())])
-    return feats
-
-
-def build_cosine_sim(X_embed: np.ndarray) -> np.ndarray:
-    centroid = X_embed.mean(axis=0, keepdims=True)   # (1, 768)
-    return cosine_similarity(X_embed, centroid)       # (N, 1)
+LABELS = vf.LABELS
 
 
 def resolve_id_column(df: pd.DataFrame, fallback_df: pd.DataFrame) -> np.ndarray:
@@ -64,20 +54,11 @@ assert len(df) == len(vistral_df), (
     f"DataFrame rows ({len(df)}) != vistral rows ({len(vistral_df)})"
 )
 
-X_embed = embeddings                                         # (N, 768)
-
-X_simple = np.array([
-    simple_feats(c, p, r)
-    for c, p, r in zip(df["context"], df["prompt"], df["response"])
-])                                                           # (N, 6)
-
-X_sim = build_cosine_sim(X_embed)                           # (N, 1)
-
-X_vistral = vistral_df[
-    ["prob_no", "prob_extrinsic", "prob_intrinsic"]
-].values                                                     # (N, 3)
-
-X = np.hstack([X_embed, X_simple, X_sim, X_vistral])       # (N, 778)
+X = vf.build_feature_matrix(
+    embeddings, df["context"], df["prompt"], df["response"],
+    vistral_df[vf.LLM_PROB_COLUMNS].values,
+    np.load(MODEL_DIR / "embedding_centroid.npy"),  # the centroid serving uses
+)
 
 assert X.shape[1] == EXPECTED_DIM, (
     f"Feature dim mismatch: got {X.shape[1]}, expected {EXPECTED_DIM}"

@@ -1,9 +1,14 @@
 import os
+import sys
 import numpy as np
 import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModel
 from tqdm import tqdm
+
+# Shared feature builder; works installed (pip install ./machine-learning) or straight from the checkout
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import vihallu_features as vf  # noqa: E402
 
 PHOBERT_MODEL = os.getenv("PHOBERT_MODEL", "vinai/phobert-base")
 PHOBERT_TOKENIZER = os.getenv("PHOBERT_TOKENIZER", PHOBERT_MODEL)
@@ -18,12 +23,7 @@ os.makedirs(OUT_DIR, exist_ok=True)
 
 def load_texts():
     df = pd.read_csv(DATA_PATH)
-    texts = (
-        df["context"].fillna("") + " "
-        + df["prompt"].fillna("") + " "
-        + df["response"].fillna("")
-    ).tolist()
-    return texts
+    return [vf.embedding_text(c, p, r) for c, p, r in zip(df["context"], df["prompt"], df["response"])]
 
 def main():
     texts = load_texts()
@@ -40,15 +40,14 @@ def main():
             batch,
             padding=True,
             truncation=True,
-            max_length=256,
+            max_length=vf.MAX_LENGTH,
             return_tensors="pt"
         )
 
         with torch.no_grad():
             outputs = model(**inputs)
             # Masked mean: plain mean(dim=1) averaged padding tokens into short texts
-            mask = inputs["attention_mask"].unsqueeze(-1).float()
-            emb = (outputs.last_hidden_state * mask).sum(dim=1) / mask.sum(dim=1)
+            emb = vf.masked_mean(outputs.last_hidden_state, inputs["attention_mask"])
 
         all_embs.append(emb.cpu().numpy())
 

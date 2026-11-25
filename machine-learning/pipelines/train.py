@@ -6,6 +6,7 @@ Outputs: artifacts/models/lgbm/, artifacts/models/metadata.yaml, artifacts/model
 """
 
 import os
+import sys
 import json
 import yaml
 import subprocess
@@ -18,8 +19,11 @@ import pandas as pd
 
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import f1_score
-from sklearn.metrics.pairwise import cosine_similarity
 from mlflow.models import infer_signature
+
+# Shared feature builder; works installed (pip install ./machine-learning) or straight from the checkout
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import vihallu_features as vf  # noqa: E402
 
 
 EXPERIMENT_NAME = "vihallu-pipeline"
@@ -27,19 +31,9 @@ MODEL_NAME      = os.getenv("MLFLOW_MODEL_NAME", "vihallu-detector")
 NUM_FOLDS       = 5
 RANDOM_STATE    = 42
 
-LABEL_MAP = {
-    "extrinsic":  0,
-    "no":         1,
-    "intrinsic":  2,
-}
-
-FEAT_DIMS = {
-    "phobert_embeddings": 768,
-    "simple_features":    6,    # len + word_count for context / prompt / response
-    "cosine_similarity":  1,    # embedding vs corpus center
-    "vistral_probs":      3,    # prob_no, prob_extrinsic, prob_intrinsic
-}
-EXPECTED_DIM = sum(FEAT_DIMS.values())  # 778
+LABEL_MAP = vf.LABEL_MAP
+FEAT_DIMS = vf.FEATURE_GROUPS
+EXPECTED_DIM = vf.FEATURE_DIM  # 778
 
 os.environ["OMP_NUM_THREADS"] = "2"
 os.environ["MKL_NUM_THREADS"] = "2"
@@ -71,26 +65,6 @@ def load_dataset():
     )
 
 
-def simple_feats(c: str, p: str, r: str) -> list:
-    """6-dim: [char_len, word_count] for each of context / prompt / response."""
-    feats = []
-    for t in [c, p, r]:
-        t = str(t)
-        feats.extend([len(t), len(t.split())])
-    return feats
-
-
-def build_cosine_sim(X_embed: np.ndarray) -> np.ndarray:
-    """
-    (N, 1) — cosine similarity of each sample embedding vs corpus centroid.
-    Fix: previously compared embedding[i] with itself → always 1.0 (useless).
-    Now measures how 'central' a sample is relative to the whole corpus.
-    """
-    centroid = X_embed.mean(axis=0, keepdims=True)          # (1, 768)
-    sim = cosine_similarity(X_embed, centroid)               # (N, 1)
-    return sim
-
-
 def load_phobert_embeddings() -> np.ndarray:
     return np.load("artifacts/features/phobert_embeddings.npy")
 
@@ -99,25 +73,14 @@ def load_vistral_feats() -> np.ndarray:
     df = pd.read_csv(
         "data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv"
     )
-    # Keep column order consistent with FEAT_DIMS declaration
-    return df[["prob_no", "prob_extrinsic", "prob_intrinsic"]].values
+    return df[vf.LLM_PROB_COLUMNS].values
 
 
 def build_feature_matrix(
     contexts, prompts, responses, X_embed, X_vistral
 ) -> np.ndarray:
-    X_simple = np.array([
-        simple_feats(c, p, r)
-        for c, p, r in zip(contexts, prompts, responses)
-    ])                                                       # (N, 6)
-
-    X_sim = build_cosine_sim(X_embed)                       # (N, 1)
-
-    X = np.hstack([X_embed, X_simple, X_sim, X_vistral])   # (N, 778)
-    assert X.shape[1] == EXPECTED_DIM, (
-        f"Feature dim mismatch: got {X.shape[1]}, expected {EXPECTED_DIM}"
-    )
-    return X
+    # Centroid of the training embeddings; saved next to the folds so serving uses the same one
+    return vf.build_feature_matrix(X_embed, contexts, prompts, responses, X_vistral, X_embed.mean(axis=0))
 
 
 class LGBMEnsemble(mlflow.pyfunc.PythonModel):
@@ -172,8 +135,7 @@ def main():
         "feature_dim":  int(X.shape[1]),
         "components":   FEAT_DIMS,
         "label_map":    LABEL_MAP,
-        "column_order": ["phobert_embeddings", "simple_features",
-                         "cosine_similarity", "vistral_probs"],
+        "column_order": list(vf.FEATURE_GROUPS),
     }
     with open("artifacts/models/feature_schema.json", "w") as f:
         json.dump(feature_schema, f, indent=2)
