@@ -3,13 +3,14 @@ import re
 from typing import List, Tuple
 
 from backend.app.evaluation.cache import evaluation_cache
-from backend.app.evaluation.interfaces import EvaluationEngine
+from backend.app.evaluation.interfaces import EmbeddingEngine, EvaluationEngine
 from backend.app.evaluation.schemas import (
     ClaimVerdict,
     EvaluationInput,
     EvaluationResult,
     RagEvaluationInput,
     RagEvaluationResult,
+    RagMetrics,
 )
 
 MAX_CLAIMS = 30
@@ -53,6 +54,30 @@ def _judge_claim(engine: EvaluationEngine, claim: str, payload: RagEvaluationInp
     return verdict, r.model_version
 
 
+def _metrics(engine: EvaluationEngine, payload: RagEvaluationInput, claims: List[ClaimVerdict]) -> RagMetrics:
+    used_chunks = {c.context_index for c in claims if c.label == "no"}
+
+    context_recall = None
+    if payload.ground_truth and payload.ground_truth.strip():
+        # Same detector, other direction: can the retrieved chunks back up the reference answer?
+        reference = [_judge_claim(engine, s, payload)[0] for s in split_claims(payload.ground_truth)]
+        context_recall = sum(c.label == "no" for c in reference) / len(reference)
+
+    answer_relevance = context_relevance = None
+    if isinstance(engine, EmbeddingEngine):
+        vectors = engine.embed([payload.question, payload.answer, *payload.contexts])
+        q = vectors[0]
+        answer_relevance = float(vectors[1] @ q)
+        context_relevance = [float(v @ q) for v in vectors[2:]]
+
+    return RagMetrics(
+        answer_relevance=answer_relevance,
+        context_relevance=context_relevance,
+        context_utilization=len(used_chunks) / len(payload.contexts),
+        context_recall=context_recall,
+    )
+
+
 def evaluate_rag(engine: EvaluationEngine, payload: RagEvaluationInput) -> RagEvaluationResult:
     """Tier 1 RAG evaluation: every answer sentence is scored against every retrieved chunk."""
     judged = [_judge_claim(engine, c, payload) for c in split_claims(payload.answer)]
@@ -71,5 +96,6 @@ def evaluate_rag(engine: EvaluationEngine, payload: RagEvaluationInput) -> RagEv
         confidence=confidence,
         faithfulness=(len(claims) - len(hallucinated)) / len(claims),
         claims=claims,
+        metrics=_metrics(engine, payload, claims),
         model_version=judged[0][1],
     )

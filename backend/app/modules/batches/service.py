@@ -4,7 +4,7 @@ import io
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 from sqlalchemy import select, desc
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
@@ -15,7 +15,8 @@ from backend.app.models.project import ProjectModel
 from backend.app.core.config import settings
 from backend.app.core.database import SessionLocal
 from backend.app.evaluation.interfaces import EvaluationEngine
-from backend.app.evaluation.schemas import EvaluationInput
+from backend.app.evaluation.schemas import EvaluationInput, RagEvaluationInput
+from backend.app.evaluation.rag import evaluate_rag
 from backend.app.evaluation.cache import evaluation_cache
 from backend.app.core.metrics import record_evaluation_metric
 from backend.app.modules.batches.schemas import (
@@ -51,7 +52,7 @@ class BatchService:
     def create_batch(
         self,
         filename: str,
-        items: List[BatchItemInput],
+        items: List[Union[BatchItemInput, RagEvaluationInput]],
         project_id: Optional[uuid.UUID] = None
     ) -> AuditBatchModel:
         if not project_id:
@@ -72,14 +73,18 @@ class BatchService:
 
         # Pre-create pending audit rows linked to this batch
         for item in items:
+            if isinstance(item, RagEvaluationInput):
+                # Same column mapping as AuditService.execute_rag_audit
+                fields = dict(context="\n\n".join(item.contexts), prompt=item.question, response=item.answer,
+                              contexts=item.contexts, ground_truth=item.ground_truth)
+            else:
+                fields = dict(context=item.context, prompt=item.prompt, response=item.response)
             audit = AuditRunModel(
                 project_id=project_id,
                 batch_id=batch.id,
-                context=item.context,
-                prompt=item.prompt,
-                response=item.response,
                 status="PROCESSING",
                 model_version=settings.MODEL_VERSION,
+                **fields
             )
             self.db.add(audit)
 
@@ -104,8 +109,19 @@ class BatchService:
             for audit in audits:
                 start_time = time.perf_counter()
                 try:
-                    cached_result = evaluation_cache.get(audit.context, audit.prompt, audit.response)
-                    if cached_result:
+                    if audit.contexts:
+                        rag = evaluate_rag(self.engine, RagEvaluationInput(
+                            question=audit.prompt,
+                            contexts=audit.contexts,
+                            answer=audit.response,
+                            ground_truth=audit.ground_truth,
+                        ))
+                        audit.claims = [c.model_dump() for c in rag.claims]
+                        audit.faithfulness = rag.faithfulness
+                        audit.rag_metrics = rag.metrics.model_dump()
+                        result = rag
+                        latency_ms = (time.perf_counter() - start_time) * 1000.0
+                    elif (cached_result := evaluation_cache.get(audit.context, audit.prompt, audit.response)):
                         result = cached_result
                         latency_ms = (time.perf_counter() - start_time) * 1000.0
                     else:
@@ -120,7 +136,8 @@ class BatchService:
 
                     audit.label = result.label
                     audit.confidence = result.confidence
-                    audit.breakdown = result.breakdown.model_dump() if result.breakdown else None
+                    breakdown = getattr(result, "breakdown", None)
+                    audit.breakdown = breakdown.model_dump() if breakdown else None
                     audit.model_version = result.model_version
                     audit.latency_ms = latency_ms
                     audit.status = "COMPLETED"
@@ -164,6 +181,7 @@ class BatchService:
         ).order_by(AuditRunModel.created_at.asc())
         audits = self.db.execute(stmt).scalars().all()
 
+        faithfulness = [a.faithfulness for a in audits if a.faithfulness is not None]
         rate = (batch.hallucination_count / batch.completed_count * 100.0) if batch.completed_count > 0 else 0.0
 
         items_resp = [
@@ -173,6 +191,7 @@ class BatchService:
                 response=a.response,
                 label=a.label,
                 confidence=a.confidence,
+                faithfulness=a.faithfulness,
                 status=a.status,
                 latency_ms=a.latency_ms,
                 created_at=a.created_at
@@ -190,6 +209,7 @@ class BatchService:
             failed_count=batch.failed_count,
             hallucination_count=batch.hallucination_count,
             hallucination_rate=round(rate, 1),
+            mean_faithfulness=sum(faithfulness) / len(faithfulness) if faithfulness else None,
             items=items_resp,
             created_at=batch.created_at,
             completed_at=batch.completed_at
@@ -215,7 +235,7 @@ class BatchService:
 
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["id", "context", "prompt", "response", "label", "confidence", "status", "latency_ms"])
+        writer.writerow(["id", "context", "prompt", "response", "label", "confidence", "faithfulness", "status", "latency_ms"])
 
         for a in audits:
             writer.writerow([
@@ -225,6 +245,7 @@ class BatchService:
                 a.response,
                 a.label or "",
                 f"{a.confidence:.4f}" if a.confidence is not None else "",
+                f"{a.faithfulness:.4f}" if a.faithfulness is not None else "",
                 a.status,
                 f"{a.latency_ms:.2f}" if a.latency_ms is not None else ""
             ])

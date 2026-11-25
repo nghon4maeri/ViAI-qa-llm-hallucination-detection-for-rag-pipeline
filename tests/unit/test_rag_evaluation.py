@@ -64,9 +64,55 @@ def test_rag_audit_endpoint_persists_claims(client):
     assert data["faithfulness"] == 0.5
     assert data["contexts"] == CONTEXTS
     assert data["claims"][1]["text"] == "Tổng thống Việt Nam sống ở đó."
+    assert data["rag_metrics"]["context_utilization"] == 0.5
+    assert len(data["rag_metrics"]["context_relevance"]) == 2
 
     detail = client.get(f"/api/v1/audits/{data['id']}").json()
     assert detail["claims"] == data["claims"]
     # RAG audits show up in the existing history list
     listed = client.get("/api/v1/audits").json()["items"]
     assert any(i["id"] == data["id"] and i["faithfulness"] == 0.5 for i in listed)
+
+
+def test_context_utilization_counts_only_supporting_chunks():
+    res = evaluate_rag(MockEngine(), RagEvaluationInput(
+        question="Thủ đô Việt Nam là gì?",
+        contexts=CONTEXTS,
+        answer="Tổng thống Việt Nam sống ở Hà Nội.",
+    ))
+    # The only claim is unsupported, so no chunk was used
+    assert res.metrics.context_utilization == 0.0
+
+
+def test_context_recall_needs_ground_truth():
+    payload = dict(question="Thủ đô Việt Nam là gì?", contexts=CONTEXTS, answer="Thủ đô của Việt Nam là Hà Nội.")
+    assert evaluate_rag(MockEngine(), RagEvaluationInput(**payload)).metrics.context_recall is None
+
+    res = evaluate_rag(MockEngine(), RagEvaluationInput(
+        **payload, ground_truth="Hà Nội là thủ đô. Tổng thống ở Hà Nội."
+    ))
+    assert res.metrics.context_recall == 0.5
+
+
+def test_relevance_uses_engine_embeddings():
+    res = evaluate_rag(MockEngine(), RagEvaluationInput(
+        question="thủ đô việt nam",
+        contexts=["thủ đô việt nam là hà nội", "bóng đá ngoại hạng anh"],
+        answer="thủ đô việt nam là hà nội",
+    ))
+    rel = res.metrics.context_relevance
+    assert rel[0] > rel[1]
+    assert res.metrics.answer_relevance > 0.5
+
+
+def test_relevance_is_none_without_embeddings():
+    class NoEmbed:
+        def __init__(self):
+            self._inner = MockEngine()
+
+        def evaluate(self, payload):
+            return self._inner.evaluate(payload)
+
+    res = evaluate_rag(NoEmbed(), RagEvaluationInput(question="q", contexts=["c"], answer="a b c"))
+    assert res.metrics.answer_relevance is None
+    assert res.metrics.context_relevance is None

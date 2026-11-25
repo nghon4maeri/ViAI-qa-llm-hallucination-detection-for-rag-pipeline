@@ -1,5 +1,8 @@
 # backend/app/evaluation/adapters/existing_pipeline.py
 import time
+from typing import List
+
+import numpy as np
 from backend.app.evaluation.interfaces import EvaluationEngine
 from backend.app.evaluation.schemas import EvaluationInput, EvaluationResult, EvaluationBreakdown
 from backend.app.core.logging import logger
@@ -57,3 +60,10 @@ class ExistingPipelineAdapter(EvaluationEngine):
             breakdown=breakdown,
             model_version="vihallu-v2-hybrid"
         )
+
+    def embed(self, texts: List[str]) -> np.ndarray:
+        pipeline = self._get_pipeline()
+        if not getattr(pipeline, "_is_loaded", False):
+            pipeline._load_models()
+        vectors = pipeline._extract_embeddings(texts)
+        return vectors / np.linalg.norm(vectors, axis=1, keepdims=True)

@@ -1,5 +1,8 @@
 # backend/app/evaluation/adapters/mock_engine.py
-from typing import Optional
+import hashlib
+from typing import List, Optional
+
+import numpy as np
 from backend.app.evaluation.interfaces import EvaluationEngine
 from backend.app.evaluation.schemas import EvaluationInput, EvaluationResult, EvaluationBreakdown
 
@@ -92,6 +95,14 @@ class MockEngine(EvaluationEngine):
             breakdown=breakdown,
             model_version="mock-v1"
         )
+
+    def embed(self, texts: List[str]) -> np.ndarray:
+        """Deterministic bag-of-words hashing, so relevance tests need no model."""
+        vectors = np.zeros((len(texts), 64))
+        for i, text in enumerate(texts):
+            for word in text.lower().split():
+                vectors[i, int(hashlib.md5(word.encode()).hexdigest(), 16) % 64] += 1.0
+        return vectors / np.maximum(np.linalg.norm(vectors, axis=1, keepdims=True), 1e-9)
 
     def predict(self, context: str, prompt: str, response: str) -> dict:
         """Legacy helper matching inference_model predict interface."""

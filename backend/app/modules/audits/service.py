@@ -61,7 +61,8 @@ class AuditService:
             prompt=request.question,
             response=request.answer,
             trace_id=trace_id,
-            contexts=request.contexts
+            contexts=request.contexts,
+            ground_truth=request.ground_truth
         )
         return await self._run_audit(audit, lambda: self._evaluate_rag(request))
 
@@ -92,6 +93,7 @@ class AuditService:
             "model_version": result.model_version,
             "claims": [c.model_dump() for c in result.claims],
             "faithfulness": result.faithfulness,
+            "rag_metrics": result.metrics.model_dump(),
         }
 
     async def _run_audit(self, audit, evaluate: Callable[[], dict]) -> AuditResponse:

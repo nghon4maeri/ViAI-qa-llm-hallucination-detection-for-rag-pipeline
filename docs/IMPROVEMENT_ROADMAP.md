@@ -1,6 +1,6 @@
 # ViAI-QA Improvement Roadmap: RAG Evaluation & Guardrail Platform
 
-**Status:** Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 core done, remainder in progress.
+**Status:** Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Next: Phase 5 (RAG trace view).
 
 ## Goal
 
@@ -52,16 +52,21 @@ RAG pipeline ──SDK / REST / MCP──▶ ViAI-QA Backend (FastAPI, existing 
 Commit the ORM models, fix the train/serve feature skew, use the 5-fold
 ensemble, add a regression test. Details in the Phase 0 report.
 
-### Phase 1: RAG evaluation core (core done)
+### Phase 1: RAG evaluation core ✅
 
 **Done:**
 - `POST /api/v1/audits/rag` (`question`, `contexts[]`, `answer`). It lives under `/audits` instead of the planned `/rag/evaluate`, so RAG audits reuse history, feedback and metrics unchanged.
 - `backend/app/evaluation/rag.py`: punctuation-based claim split. Each claim is scored against each chunk by the existing `EvaluationEngine` through `evaluation_cache`. A claim counts as supported if any chunk says `no`; otherwise it takes the verdict of the most related chunk (lowest NLI neutral).
 - Overall label: `no` only if every claim is supported, otherwise `intrinsic` takes precedence over `extrinsic`. `faithfulness` = share of supported claims.
 - Migration `003_add_rag_fields`: `audit_runs.contexts`, `claims`, `faithfulness`.
-- Tests: `tests/unit/test_rag_evaluation.py`.
+- `RagMetrics`, stored in `audit_runs.rag_metrics` (`ground_truth` gets its own column):
+  - `context_utilization`: share of chunks that support at least one claim (retrieval noise). Needs no embeddings.
+  - `context_recall`: share of `ground_truth` sentences that the chunks support. Same detector, used in the other direction.
+  - `answer_relevance`, `context_relevance[]`: question cosines from engines that implement the optional `EmbeddingEngine.embed()`; `None` otherwise. With PhoBERT they separate related from random text (AUC 0.85 question–answer, 0.77 question–context, measured on 150 ViHallu rows) but are **not calibrated**: compare across runs, don't threshold. Upgrade: a Vietnamese bi-encoder.
+- RAG batches: `POST /api/v1/batches/upload` with a `.jsonl` file (one `{question, contexts, answer, ground_truth?}` per line; a bad line returns 400 with its line number). Batch detail adds `faithfulness` per item and `mean_faithfulness`; CSV export adds a `faithfulness` column.
+- Tests: `tests/unit/test_rag_evaluation.py`, `tests/integration/test_batches_api.py`.
 
-**Remaining:** context and answer relevance, `ground_truth` precision/recall, RAG batch upload (JSONL).
+**Not done:** answer correctness against `ground_truth`. It needs a semantic-equivalence judge, so it is planned for the Phase 2 agent.
 
 Original plan:
 - `RagEvaluationInput`: `question`, `contexts: list[str]`, `answer`, optional `ground_truth`; Alembic migration `003`.

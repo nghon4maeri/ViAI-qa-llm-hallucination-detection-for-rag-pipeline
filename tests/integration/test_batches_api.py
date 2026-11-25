@@ -59,3 +59,38 @@ def test_batch_upload_empty_csv(client: TestClient):
     }
     response = client.post("/api/v1/batches/upload", files=files)
     assert response.status_code == 400
+
+
+def test_rag_jsonl_batch(client: TestClient, db_session, test_mock_engine):
+    import json
+    lines = [
+        {"question": "Thủ đô Việt Nam là gì?", "contexts": ["Hà Nội là thủ đô của Việt Nam."],
+         "answer": "Thủ đô của Việt Nam là Hà Nội.", "ground_truth": "Hà Nội."},
+        {"question": "Thủ đô Việt Nam là gì?", "contexts": ["Hà Nội là thủ đô của Việt Nam."],
+         "answer": "Thủ đô của Việt Nam là Hà Nội. Tổng thống sống ở đó."},
+    ]
+    body = "\n".join(json.dumps(line, ensure_ascii=False) for line in lines)
+    res = client.post("/api/v1/batches/upload",
+                      files={"file": ("eval.jsonl", io.BytesIO(body.encode("utf-8")), "application/jsonl")})
+    assert res.status_code == 201
+    batch_id = res.json()["batch_id"]
+
+    BatchService(db_session, test_mock_engine).process_batch_in_background(uuid.UUID(batch_id), session=db_session)
+
+    detail = client.get(f"/api/v1/batches/{batch_id}").json()
+    assert detail["completed_count"] == 2
+    assert sorted(i["faithfulness"] for i in detail["items"]) == [0.5, 1.0]
+    assert detail["mean_faithfulness"] == 0.75
+    assert "faithfulness" in client.get(f"/api/v1/batches/{batch_id}/export").text.splitlines()[0]
+
+    with_gt = [client.get(f"/api/v1/audits/{i['id']}").json() for i in detail["items"]]
+    with_gt = [a for a in with_gt if a["ground_truth"]]
+    assert len(with_gt) == 1 and with_gt[0]["rag_metrics"]["context_recall"] == 1.0
+
+
+def test_rag_jsonl_batch_reports_bad_line(client: TestClient):
+    body = '{"question": "q", "contexts": ["c"], "answer": "a"}\n{"question": "q", "answer": "a"}\n'
+    res = client.post("/api/v1/batches/upload",
+                      files={"file": ("eval.jsonl", io.BytesIO(body.encode("utf-8")), "application/jsonl")})
+    assert res.status_code == 400
+    assert "Dòng 2" in res.json()["detail"]

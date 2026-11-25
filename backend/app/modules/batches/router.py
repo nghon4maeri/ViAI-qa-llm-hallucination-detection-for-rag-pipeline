@@ -1,6 +1,7 @@
 # backend/app/modules/batches/router.py
 import csv
 import io
+import json
 import uuid
 from typing import List, Optional
 from fastapi import (
@@ -14,10 +15,12 @@ from fastapi import (
     Response,
     status
 )
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from backend.app.core.database import get_db
 from backend.app.evaluation.interfaces import EvaluationEngine
+from backend.app.evaluation.schemas import RagEvaluationInput
 from backend.app.modules.audits.router import get_engine
 from backend.app.modules.batches.service import BatchService
 from backend.app.modules.batches.schemas import (
@@ -50,23 +53,10 @@ async def upload_batch_csv(
     except UnicodeDecodeError:
         text = content.decode("latin-1")
 
-    reader = csv.DictReader(io.StringIO(text))
-    items: List[BatchItemInput] = []
-
-    for row in reader:
-        # Flexible column name matching
-        context = row.get("context") or row.get("Context") or row.get("ngu_canh") or ""
-        prompt = row.get("prompt") or row.get("Prompt") or row.get("cau_hoi") or ""
-        response = row.get("response") or row.get("Response") or row.get("cau_tra_loi") or ""
-
-        if context.strip() and prompt.strip() and response.strip():
-            items.append(BatchItemInput(context=context, prompt=prompt, response=response))
-
-    if not items:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File CSV không chứa dữ liệu hợp lệ (yêu cầu các cột: context, prompt, response)"
-        )
+    if (file.filename or "").lower().endswith(".jsonl"):
+        items = _parse_rag_jsonl(text)
+    else:
+        items = _parse_csv(text)
 
     batch = service.create_batch(
         filename=file.filename or "batch_upload.csv",
@@ -85,6 +75,48 @@ async def upload_batch_csv(
         status="PROCESSING",
         message=f"Đã tiếp nhận {len(items)} câu hỏi để thẩm định trong tiến trình nền."
     )
+
+
+def _parse_rag_jsonl(text: str) -> List[RagEvaluationInput]:
+    """One RAG turn per line: {"question", "contexts": [...], "answer", "ground_truth"?}."""
+    items: List[RagEvaluationInput] = []
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            items.append(RagEvaluationInput.model_validate(json.loads(line)))
+        except (json.JSONDecodeError, ValidationError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Dòng {line_no} không hợp lệ: {exc}"
+            )
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File JSONL không chứa dữ liệu (mỗi dòng cần: question, contexts, answer)"
+        )
+    return items
+
+
+def _parse_csv(text: str) -> List[BatchItemInput]:
+    reader = csv.DictReader(io.StringIO(text))
+    items: List[BatchItemInput] = []
+
+    for row in reader:
+        # Flexible column name matching
+        context = row.get("context") or row.get("Context") or row.get("ngu_canh") or ""
+        prompt = row.get("prompt") or row.get("Prompt") or row.get("cau_hoi") or ""
+        response = row.get("response") or row.get("Response") or row.get("cau_tra_loi") or ""
+
+        if context.strip() and prompt.strip() and response.strip():
+            items.append(BatchItemInput(context=context, prompt=prompt, response=response))
+
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File CSV không chứa dữ liệu hợp lệ (yêu cầu các cột: context, prompt, response)"
+        )
+    return items
 
 
 @router.get("/{batch_id}", response_model=BatchDetailResponse)

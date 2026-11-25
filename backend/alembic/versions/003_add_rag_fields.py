@@ -22,10 +22,14 @@ def upgrade() -> None:
         batch_op.add_column(sa.Column('contexts', JSONType, nullable=True))
         batch_op.add_column(sa.Column('claims', JSONType, nullable=True))
         batch_op.add_column(sa.Column('faithfulness', sa.Float(), nullable=True))
+        batch_op.add_column(sa.Column('ground_truth', sa.Text(), nullable=True))
+        batch_op.add_column(sa.Column('rag_metrics', JSONType, nullable=True))
 
 
 def downgrade() -> None:
     with op.batch_alter_table('audit_runs') as batch_op:
+        batch_op.drop_column('rag_metrics')
+        batch_op.drop_column('ground_truth')
         batch_op.drop_column('faithfulness')
         batch_op.drop_column('claims')
         batch_op.drop_column('contexts')

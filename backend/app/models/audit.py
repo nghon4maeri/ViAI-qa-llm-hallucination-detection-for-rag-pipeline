@@ -41,6 +41,8 @@ class AuditRunModel(Base, TimestampMixin):
     contexts: Mapped[Optional[List[str]]] = mapped_column(JSONType, nullable=True)
     claims: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(JSONType, nullable=True)
     faithfulness: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    ground_truth: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    rag_metrics: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSONType, nullable=True)
     model_version: Mapped[str] = mapped_column(String(50), nullable=False, default="vihallu-v2-hybrid")
 
     error_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)

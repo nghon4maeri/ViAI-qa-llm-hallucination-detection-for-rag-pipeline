@@ -1,5 +1,9 @@
 # backend/app/evaluation/interfaces.py
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, List, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    import numpy as np
+
 from backend.app.evaluation.schemas import EvaluationInput, EvaluationResult
 
 
@@ -20,4 +24,13 @@ class EvaluationEngine(Protocol):
 
     def warmup(self) -> None:
         """Trigger preloading of model weights and resources."""
+        ...
+
+
+@runtime_checkable
+class EmbeddingEngine(Protocol):
+    """Optional capability: engines that can embed text enable RAG relevance metrics."""
+
+    def embed(self, texts: List[str]) -> "np.ndarray":
+        """Return one L2-normalised vector per text."""
         ...

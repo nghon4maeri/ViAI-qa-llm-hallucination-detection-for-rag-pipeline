@@ -26,6 +26,7 @@ class BatchItemResult(BaseModel):
     response: str
     label: Optional[str] = None
     confidence: Optional[float] = None
+    faithfulness: Optional[float] = None
     status: str
     latency_ms: Optional[float] = None
     created_at: datetime
@@ -44,6 +45,7 @@ class BatchDetailResponse(BaseModel):
     failed_count: int
     hallucination_count: int
     hallucination_rate: float
+    mean_faithfulness: Optional[float] = Field(None, description="Average over completed RAG items; None for classic batches")
     items: List[BatchItemResult] = []
     created_at: datetime
     completed_at: Optional[datetime] = None

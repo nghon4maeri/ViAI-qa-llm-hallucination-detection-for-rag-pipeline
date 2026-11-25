@@ -605,7 +605,18 @@ curl -X POST http://localhost:8080/api/v1/audits/rag \
     "answer": "Thủ đô của Việt Nam là Hà Nội. Tổng thống Việt Nam sống ở đó."
   }'
 ```
-The response is a normal audit record plus `faithfulness` (share of supported sentences), `contexts`, and `claims[]` (per-sentence `label`, `confidence`, `context_index`, NLI/NER `breakdown`). RAG audits appear in `GET /api/v1/audits` and accept feedback like any other audit.
+The response is a normal audit record plus:
+- `faithfulness`: share of answer sentences supported by the chunks
+- `claims[]`: per sentence, `label`, `confidence`, `context_index` (the supporting chunk) and the NLI/NER `breakdown`
+- `rag_metrics`: `context_utilization`, `answer_relevance`, `context_relevance[]` (uncalibrated PhoBERT cosines, compare across runs), and `context_recall` when you send `ground_truth`
+
+RAG audits appear in `GET /api/v1/audits` and accept feedback like any other audit.
+
+**Evaluate a RAG dataset:** upload a `.jsonl` file to `POST /api/v1/batches/upload`, one turn per line:
+```json
+{"question": "...", "contexts": ["chunk 1", "chunk 2"], "answer": "...", "ground_truth": "optional"}
+```
+`GET /api/v1/batches/{id}` returns per-item `faithfulness` and `mean_faithfulness`.
 
 **KServe endpoint (GKE):**
 ```bash
