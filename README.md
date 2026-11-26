@@ -28,7 +28,6 @@ ViAI-QA checks the answers of Vietnamese RAG systems (medical domain) against th
 
 <p align="center"><img src="docs/images/overview.png" alt="System" width="90%"></p>
 
-Each numbered path of the overview is drawn as its own pipeline diagram, next to the section that explains it. The diagrams are code: [`docs/diagrams/architecture.py`](docs/diagrams/architecture.py), built with [mingrammer/diagrams](https://diagrams.mingrammer.com) in the same Excalidraw style as the overview (Excalidraw's Virgil font, OFL). Regenerate them with `make diagrams`; this needs Graphviz plus `diagrams`, `cairosvg` and `fonttools` from `requirements/dev.txt`.
 
 | Pipeline | Overview steps | Section |
 |---|---|---|
@@ -57,8 +56,6 @@ The system has been successfully deployed to Google Cloud production infrastruct
 
 MLflow uses a managed PostgreSQL instance hosted on **Google Cloud SQL**.
 
-<p align="center"><img src="docs/images/cloud-sql.png" alt="Cloud-SQL" width="75%"></p>
-
 | Property | Value |
 |--------|------|
 | Instance | mlflow-postgres-vihallu-llm-detect |
@@ -66,6 +63,10 @@ MLflow uses a managed PostgreSQL instance hosted on **Google Cloud SQL**.
 | Region | asia-southeast1 |
 | Tier | db-f1-micro |
 | Storage | SSD |
+
+Cloud SQL console:
+
+<p align="center"><img src="docs/images/cloud-sql.png" alt="Cloud SQL" width="75%"></p>
 
 ## Tech Stack
 
@@ -257,29 +258,13 @@ docker compose -f infrastructure/docker-compose.yml up -d mlflow
 ```bash
 curl http://localhost:5000/health # response: OK
 ```
-
-MLflow UI at `http://localhost:5000`:
-
-MLflow Experiment:
-
-<p align="center"><img src="docs/images/mlflow-experiments.png" alt="MLflow-experiment" width="75%"></p>
-
-MLflow Model registry
-
-<p align="center"><img src="docs/images/mlflow-registry.png" alt="MLflow-model-registry" width="75%"></p>
-
-MinIO UI at `http://localhost:9001` (minioadmin / minioadmin):
-
-<p align="center"><img src="docs/images/minio-buckets.png" alt="Minio" width="75%"></p>
+MLflow UI: `http://localhost:5000` · MinIO UI: `http://localhost:9001` (minioadmin / minioadmin)
 
 **Start backend:**
 ```bash
 docker compose -f infrastructure/docker-compose.yml up -d backend
-# Backend available at http://localhost:8080
+# Backend available at http://localhost:8080 (Swagger UI at /docs)
 ```
-FastAPI UI:
-
-<p align="center"><img src="docs/images/backend.png" alt="FastAPI" width="75%"></p>
 
 **Start observability stack:**
 ```bash
@@ -289,27 +274,25 @@ docker compose -f infrastructure/docker-compose.yml up -d prometheus grafana lok
 # Jaeger: http://localhost:16686
 ```
 
-Grafana — prediction distribution dashboard:
-
-<p align="center"><img src="docs/images/grafana-dashboards.png" alt="Grafana" width="75%"></p>
-
-Prometheus — scrape targets all UP:
-
-<p align="center"><img src="docs/images/prometheus-targets.png" alt="Prometheus" width="75%"></p>
-
-Loki — backend log explorer:
-
-<p align="center"><img src="docs/images/grafana-loki.png" alt="Loki" width="75%"></p>
-
-Jaeger — distributed trace for /api/predict:
-
-<p align="center"><img src="docs/images/jaeger-trace.png" alt="Jaeger" width="75%"></p>
-
 **Start NGINX API Gateway:**
 ```bash
 docker compose -f infrastructure/docker-compose.yml up -d nginx-gateway
 # API available at http://localhost:80 — requires X-API-Key header
 ```
+
+**Evidence**
+
+MLflow experiments (`http://localhost:5000`):
+
+<p align="center"><img src="docs/images/mlflow-experiments.png" alt="MLflow experiments" width="75%"></p>
+
+MinIO buckets (`http://localhost:9001`):
+
+<p align="center"><img src="docs/images/minio-buckets.png" alt="MinIO" width="75%"></p>
+
+FastAPI Swagger UI:
+
+<p align="center"><img src="docs/images/backend.png" alt="FastAPI" width="75%"></p>
 
 ---
 
@@ -336,10 +319,6 @@ terraform init
 terraform plan
 terraform apply
 ```
-
-GCP Console — GKE cluster vihallu-cluster, 2 nodes Ready:
-
-<p align="center"><img src="docs/images/gke-cluster.png" alt="GCP" width="75%"></p>
 
 **Connect to cluster:**
 ```bash
@@ -370,20 +349,12 @@ gsutil uniformbucketlevelaccess set on gs://vihallu-models
 gsutil iam ch allUsers:objectViewer gs://vihallu-models
 ```
 
-GCS Console — vihallu-models/hallucination-detector/model/: 
-
-<p align="center"><img src="docs/images/gcs-bucket.png" alt="GCS" width="75%"></p>
-
 **Deploy InferenceService:**
 ```bash
 kubectl apply -f infrastructure/k8s/runtimes/mlflow-cluster-runtime.yaml
 kubectl apply -f infrastructure/k8s/kserve/inference-service.yaml
 kubectl get inferenceservice -n hallucination-prod
 ```
-
-Kserve READY:
-
-<p align="center"><img src="docs/images/kserve-ready.png" alt="Kserve" width="75%"></p>
 
 **Deploy Backend via Helm:**
 ```bash
@@ -396,9 +367,23 @@ helm upgrade --install hallucination-backend \
   --wait --timeout=10m
 ```
 
+**Evidence**
+
+GCP Console — GKE cluster `vihallu-cluster`, 2 nodes Ready:
+
+<p align="center"><img src="docs/images/gke-cluster.png" alt="GKE cluster" width="75%"></p>
+
+GCS — `vihallu-models/hallucination-detector/model/`:
+
+<p align="center"><img src="docs/images/gcs-bucket.png" alt="GCS bucket" width="75%"></p>
+
+KServe InferenceService READY:
+
+<p align="center"><img src="docs/images/kserve-ready.png" alt="KServe ready" width="75%"></p>
+
 All pods 2/2 Running:
 
-<p align="center"><img src="docs/images/pods-running.png" alt="pods" width="75%"></p>
+<p align="center"><img src="docs/images/pods-running.png" alt="Pods running" width="75%"></p>
 
 ---
 
@@ -417,14 +402,6 @@ docker exec hallucination-jenkins \
   cat /var/jenkins_home/secrets/initialAdminPassword
 # Open http://localhost:8080
 ```
-
-GitHub Actions — CI pipeline passed:
-
-<p align="center"><img src="docs/images/github-actions.png" alt="Github" width="75%"></p>
-
-Jenkins — CD pipeline all stages green:
-
-<p align="center"><img src="docs/images/jenkins-pipeline.png" alt="Jenkins" width="75%"></p>
 
 **Required Jenkins credentials:**
 
@@ -446,6 +423,16 @@ Jenkins — CD pipeline all stages green:
 | `JENKINS_URL` | `http://<host-ip>:8080` |
 | `JENKINS_USER` | `admin` |
 | `JENKINS_TOKEN` | Jenkins API token |
+
+**Evidence**
+
+GitHub Actions — CI run passed (an earlier run, before the `web` and `packages` jobs were added):
+
+<p align="center"><img src="docs/images/github-actions.png" alt="GitHub Actions" width="75%"></p>
+
+Jenkins — CD pipeline, all stages green:
+
+<p align="center"><img src="docs/images/jenkins-pipeline.png" alt="Jenkins" width="75%"></p>
 
 ---
 
@@ -487,10 +474,6 @@ promote          artifacts/models/metadata.yaml    -> MLflow registry alias `pro
 ```
 The stage graph is drawn in the diagram at the top of this section (`dvc dag` prints it in the terminal).
 
-MLflow — experiment runs comparing fold metrics:
-
-<p align="center"><img src="docs/images/mlflow-metric.png" alt="MLflow" width="75%"></p>
-
 **Model performance (OOF):**
 - F1 Score: **0.8634** (v2.1; see [Phase 0 report](docs/reports/PHASE_0_FOUNDATION_FIX_REPORT.md))
 
@@ -508,6 +491,12 @@ make test-ml
 ```bash
 python machine-learning/pipelines/promote.py
 ```
+
+**Evidence**
+
+MLflow — experiment runs comparing fold metrics:
+
+<p align="center"><img src="docs/images/mlflow-metric.png" alt="MLflow" width="75%"></p>
 
 MLflow model registry — production alias set on v2:
 
@@ -632,6 +621,24 @@ The backend exposes Prometheus metrics, sends OpenTelemetry traces to Jaeger and
 - Model confidence score distribution
 - Data drift (Evidently)
 - KServe queue depth and replica count
+
+**Evidence**
+
+Grafana — prediction distribution dashboard:
+
+<p align="center"><img src="docs/images/grafana-dashboards.png" alt="Grafana" width="75%"></p>
+
+Prometheus — scrape targets all UP:
+
+<p align="center"><img src="docs/images/prometheus-targets.png" alt="Prometheus" width="75%"></p>
+
+Loki — backend log explorer:
+
+<p align="center"><img src="docs/images/grafana-loki.png" alt="Loki" width="75%"></p>
+
+Jaeger — distributed trace for /api/predict:
+
+<p align="center"><img src="docs/images/jaeger-trace.png" alt="Jaeger" width="75%"></p>
 
 ---
 
