@@ -120,6 +120,26 @@ class LGBMEnsemble(mlflow.pyfunc.PythonModel):
         )
 
 
+def serving_model_kwargs(sample_x, models_dir: str = "artifacts/models/lgbm") -> dict:
+    """
+    pyfunc arguments shared by train (log_model) and scripts/export_serving_model.py (save_model).
+    Tensor signature (float64, shape (-1, 778)): MLServer's MLflow runtime rejects the integer column
+    names a DataFrame of X would give. Pins are the running versions: the pickle must be loaded by the
+    mlflow that wrote it (infrastructure/docker/Dockerfile.predictor uses the same).
+    """
+    sample_input = np.asarray(sample_x, dtype=np.float64)
+    sample_output = pd.DataFrame(np.zeros((len(sample_input), 3)),
+                                 columns=["prob_extrinsic", "prob_no", "prob_intrinsic"])
+    return dict(
+        python_model=LGBMEnsemble(),
+        artifacts={"models_dir": models_dir},
+        signature=infer_signature(sample_input, sample_output),
+        input_example=sample_input,
+        pip_requirements=[f"lightgbm=={lgb.__version__}", f"mlflow=={mlflow.__version__}",
+                          "numpy", "pandas", "scikit-learn"],
+    )
+
+
 def main():
     mlflow.set_tracking_uri(
         os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
@@ -193,29 +213,7 @@ def main():
         mlflow.log_metric("oof_macro_f1", oof_f1)
         print(f"[INFO] OOF macro F1: {oof_f1:.4f}")
 
-        # tensor signature (ndarray float64, shape (-1, 778)): MLServer's MLflow runtime rejects the integer
-        # column names a DataFrame of X would give, so the KServe predictor could not load the model
-        sample_input  = np.asarray(X[:5], dtype=np.float64)
-        sample_output = pd.DataFrame(
-            np.zeros((5, 3)),
-            columns=["prob_extrinsic", "prob_no", "prob_intrinsic"],
-        )
-        signature = infer_signature(sample_input, sample_output)
-
-        mlflow.pyfunc.log_model(
-            artifact_path="model",
-            python_model=LGBMEnsemble(),
-            artifacts={"models_dir": "artifacts/models/lgbm"},
-            signature=signature,
-            input_example=sample_input,
-            pip_requirements=[
-                f"lightgbm=={lgb.__version__}",
-                f"mlflow=={mlflow.__version__}",  # the pickle must be loaded by the mlflow that wrote it
-                "numpy",
-                "pandas",
-                "scikit-learn",
-            ],
-        )
+        mlflow.pyfunc.log_model(artifact_path="model", **serving_model_kwargs(X[:5]))
         print("[INFO] Model logged to MLflow.")
 
         metadata = {

@@ -1,0 +1,23 @@
+# infrastructure/k8s/values/model-minikube.yaml
+# Local deploy test of the hallucination-model chart (infrastructure/k8s/local/deploy-minikube.sh).
+# Same chart and runtime as prod; only what a laptop cluster cannot provide changes:
+#   - predictor only: the transformer image needs torch + NLI/NER weights (several GB)
+#   - model from a PVC instead of S3/GCS, one replica, smaller requests
+model:
+  name: hallucination-detector
+  runtime: mlflow-runtime
+  storageUri: "pvc://hallucination-model-store/model"
+  minReplicas: 1
+  maxReplicas: 1
+  scaleTarget: 10
+  scaleToZeroGracePeriod: "120s"
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1536Mi"
+
+transformer:
+  enabled: false

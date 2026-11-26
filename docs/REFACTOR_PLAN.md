@@ -167,7 +167,13 @@ API (KServeEngine) --V2 {context, prompt, response}--> transformer (backend imag
 - `dvc repro train` with the fixed `train.py`: OOF macro F1 0.8634, and the 5 fold files are byte-identical to the previous ones. The model it logged (tensor signature, mlflow 3.10 / lightgbm 4.7 pins) loads in MLServer and returns the local boosters' probabilities.
 - `tests/api/test_kserve.py` (7 tests).
 
-**Not verified:** a cluster deploy. The first deploy needs `hf-token` (optional) and `ghcr-secret` in the namespace, and the transformer's first start downloads the NLI/NER models (the readiness probe allows ~6 min). The backend image with kserve 0.16 has not been rebuilt here (torch download).
+**Local cluster deploy (2026-11-26):** `infrastructure/k8s/local/deploy-minikube.sh` on minikube (profile `viai-qa`) installs cert-manager 1.16 and KServe 0.16 in Standard mode, the `mlflow-runtime` ClusterServingRuntime and the `hallucination-model` chart (`values/model-minikube.yaml`: predictor only, model on a PVC). From an empty namespace it reaches InferenceService Ready in under 2 minutes, and 10/10 predictions through the KServe Service equal the local ensemble. Found on the way:
+- MLServer 1.7.1's parallel workers crash with uvloop ≥ 0.22 (`There is no current event loop in thread 'MainThread'`). `Dockerfile.predictor` pins `uvloop<0.22`.
+- `Dockerfile.predictor` is a 1.4 GB MLServer image pinned to the mlflow/lightgbm that `train.py` logs with. `seldonio/mlserver:1.7.1` is several GB and ships its own mlflow. Switching prod's runtime to this image is recommended but not done; it needs a Jenkins build and push.
+- `machine-learning/scripts/export_serving_model.py` writes the same pyfunc as `train.py` (shared `serving_model_kwargs`) without a tracking server.
+- `infrastructure/iac/ansible/setup_k8s_stack.yaml` still installs KServe v0.11.0 in Serverless mode for GKE; not changed here.
+
+**Not verified:** a GKE deploy (no cloud budget). The first deploy needs `hf-token` (optional) and `ghcr-secret` in the namespace, and the transformer's first start downloads the NLI/NER models (the readiness probe allows ~6 min). The backend image with kserve 0.16 has not been rebuilt here (torch download).
 
 **Original plan:**
 - `services/model-transformer`: a KServe transformer that uses `vihallu_features` (PhoBERT + LLM probs) to turn `{context, prompt, response}` into the 778-dim vector for the existing MLflow/MLServer predictor (`mlflow-runtime`).

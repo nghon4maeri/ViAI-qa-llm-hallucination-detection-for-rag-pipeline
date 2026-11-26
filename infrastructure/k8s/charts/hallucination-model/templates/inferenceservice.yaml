@@ -10,6 +10,7 @@ metadata:
     autoscaling.knative.dev/target: {{ .Values.model.scaleTarget | quote }}
     autoscaling.knative.dev/scaleToZeroGracePeriod: {{ .Values.model.scaleToZeroGracePeriod | quote }}
 spec:
+  {{- if .Values.transformer.enabled }}
   # text -> 778 features -> predictor -> guardrails (backend/app/inference/kserve_transformer.py)
   transformer:
     imagePullSecrets:
@@ -41,6 +42,7 @@ spec:
           initialDelaySeconds: 60
           periodSeconds: 10
           failureThreshold: 30
+  {{- end }}
   predictor:
     model:
       modelFormat:
