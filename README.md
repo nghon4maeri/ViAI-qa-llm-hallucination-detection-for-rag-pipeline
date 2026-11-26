@@ -1,6 +1,6 @@
-# Vietnamese LLM Hallucination Detection
+# ViAI-QA: LLM Hallucination Detection for RAG Pipelines
 
-(a hybrid system that integrates multiple pretrained language models and an ensemble classifier)
+ViAI-QA checks the answers of Vietnamese RAG systems (medical domain) against their retrieved documents. It runs a hybrid detector (PhoBERT, NLI, NER and LLM signals fused into a LightGBM ensemble), an online guard, and a Claude judge agent for doubtful claims.
 
 ---
 
@@ -27,7 +27,7 @@
 
 ## System Architecture
 
-![System](docs/images/overview.png)
+<p align="center"><img src="docs/images/overview.png" alt="System" width="90%"></p>
 
 Each numbered path of the overview is drawn as its own pipeline diagram, next to the section that explains it. The diagrams are code: [`docs/diagrams/architecture.py`](docs/diagrams/architecture.py), built with [mingrammer/diagrams](https://diagrams.mingrammer.com) in the same Excalidraw style as the overview (Excalidraw's Virgil font, OFL). Regenerate them with `make diagrams`; this needs Graphviz plus `diagrams`, `cairosvg` and `fonttools` from `requirements/dev.txt`.
 
@@ -58,7 +58,7 @@ The system has been successfully deployed to Google Cloud production infrastruct
 
 MLflow uses a managed PostgreSQL instance hosted on **Google Cloud SQL**.
 
-![Cloud-SQL](docs/images/cloud-sql.png)
+<p align="center"><img src="docs/images/cloud-sql.png" alt="Cloud-SQL" width="75%"></p>
 
 | Property | Value |
 |--------|------|
@@ -172,11 +172,12 @@ Extrinsic hallucinations indicate content generation beyond the provided evidenc
 
 To effectively detect and classify hallucinations, this project proposes a **multi-stage, multi-feature hybrid architecture** that integrates complementary linguistic, semantic, and reasoning-based signals. All extracted features are fused into a unified feature space (~778 dimensions) and fed into a **LightGBM ensemble model** trained with stratified cross-validation.
 
-![Model Design](docs/images/model-design.png)
+<p align="center"><img src="docs/images/model-design.png" alt="Model Design" width="75%"></p>
 
 ### Training Pipeline
 
-![Training](docs/images/training-pipeline.png)
+<p align="center"><img src="docs/images/training-pipeline.png" alt="Training" width="90%"></p>
+
 ### Feature Groups
 
 > **Research model vs served model.** The groups below describe the competition model built in `machine-learning/notebooks/`. The model the DVC pipeline trains and the API serves (`machine-learning/pipelines/train.py`, 778 features, OOF Macro-F1 0.8634) is simpler:
@@ -244,7 +245,7 @@ Pre-computed prediction probabilities from Qwen2.5 acting as an LLM-based zero-s
 
 ### Training Strategy
 
-![Training Strategy](docs/images/training-strategy.png)
+<p align="center"><img src="docs/images/training-strategy.png" alt="Training Strategy" width="90%"></p>
 
 - **Objective**: Multi-class classification with softmax
 
@@ -276,7 +277,7 @@ This system contributes:
 ## Repository Structure
 
 ```
-vietnamese-llm-hallucination-detection/
+ViAI-qa-llm-hallucination-detection-for-rag-pipeline/
 │
 ├── applications/                   # Deployable applications
 │   ├── api/                        # FastAPI backend (Python package `backend`) + Alembic
@@ -344,8 +345,8 @@ vietnamese-llm-hallucination-detection/
 
 **Clone repository:**
 ```bash
-git clone https://github.com/nhnammldlnlpcvrs/vietnamese-llm-hallucination-detection
-cd vietnamese-llm-hallucination-detection
+git clone https://github.com/nghon4maeri/ViAI-qa-llm-hallucination-detection-for-rag-pipeline
+cd ViAI-qa-llm-hallucination-detection-for-rag-pipeline
 ```
 
 **Setup environment:**
@@ -369,14 +370,16 @@ curl http://localhost:5000/health # response: OK
 MLflow UI at `http://localhost:5000`:
 
 MLflow Experiment:
-![MLflow-experiment](docs/images/mlflow-experiments.png)
+
+<p align="center"><img src="docs/images/mlflow-experiments.png" alt="MLflow-experiment" width="75%"></p>
 
 MLflow Model registry
-![MLflow-model-registry](docs/images/mlflow-registry.png)
+
+<p align="center"><img src="docs/images/mlflow-registry.png" alt="MLflow-model-registry" width="75%"></p>
 
 MinIO UI at `http://localhost:9001` (minioadmin / minioadmin):
 
-![Minio](docs/images/minio-buckets.png)
+<p align="center"><img src="docs/images/minio-buckets.png" alt="Minio" width="75%"></p>
 
 **Start backend:**
 ```bash
@@ -384,7 +387,8 @@ docker compose -f infrastructure/docker-compose.yml up -d backend
 # Backend available at http://localhost:8080
 ```
 FastAPI UI:
-![FastAPI](docs/images/backend.png)
+
+<p align="center"><img src="docs/images/backend.png" alt="FastAPI" width="75%"></p>
 
 **Start observability stack:**
 ```bash
@@ -395,16 +399,20 @@ docker compose -f infrastructure/docker-compose.yml up -d prometheus grafana lok
 ```
 
 Grafana — prediction distribution dashboard:
-![Grafana](docs/images/grafana-dashboards.png)
+
+<p align="center"><img src="docs/images/grafana-dashboards.png" alt="Grafana" width="75%"></p>
 
 Prometheus — scrape targets all UP:
-![Prometheus](docs/images/prometheus-targets.png)
+
+<p align="center"><img src="docs/images/prometheus-targets.png" alt="Prometheus" width="75%"></p>
 
 Loki — backend log explorer:
-![Loki](docs/images/grafana-loki.png)
+
+<p align="center"><img src="docs/images/grafana-loki.png" alt="Loki" width="75%"></p>
 
 Jaeger — distributed trace for /api/predict:
-![Jaeger](docs/images/jaeger-trace.png)
+
+<p align="center"><img src="docs/images/jaeger-trace.png" alt="Jaeger" width="75%"></p>
 
 **Start NGINX API Gateway:**
 ```bash
@@ -416,7 +424,7 @@ docker compose -f infrastructure/docker-compose.yml up -d nginx-gateway
 
 ### 2. GKE Deployment (Terraform & Ansible)
 
-![Infrastructure pipeline](docs/images/architecture/infrastructure-pipeline.png)
+<p align="center"><img src="docs/images/architecture/infrastructure-pipeline.png" alt="Infrastructure pipeline" width="70%"></p>
 
 Terraform creates the network, GKE cluster, Cloud SQL and secrets. Ansible installs cert-manager, KServe, MLflow and monitoring into the cluster. The Helm releases (by hand or from Jenkins) deploy the backend, the InferenceService, the gateway and the drift service. `deploy-minikube.sh` runs the same chart locally without cloud cost.
 
@@ -439,7 +447,8 @@ terraform apply
 ```
 
 GCP Console — GKE cluster vihallu-cluster, 2 nodes Ready:
-![GCP](docs/images/gke-cluster.png)
+
+<p align="center"><img src="docs/images/gke-cluster.png" alt="GCP" width="75%"></p>
 
 **Connect to cluster:**
 ```bash
@@ -471,7 +480,8 @@ gsutil iam ch allUsers:objectViewer gs://vihallu-models
 ```
 
 GCS Console — vihallu-models/hallucination-detector/model/: 
-![GCS](docs/images/gcs-bucket.png)
+
+<p align="center"><img src="docs/images/gcs-bucket.png" alt="GCS" width="75%"></p>
 
 **Deploy InferenceService:**
 ```bash
@@ -481,7 +491,8 @@ kubectl get inferenceservice -n hallucination-prod
 ```
 
 Kserve READY:
-![Kserve](docs/images/kserve-ready.png)
+
+<p align="center"><img src="docs/images/kserve-ready.png" alt="Kserve" width="75%"></p>
 
 **Deploy Backend via Helm:**
 ```bash
@@ -495,21 +506,18 @@ helm upgrade --install hallucination-backend \
 ```
 
 All pods 2/2 Running:
-![pods](docs/images/pods-running.png)
+
+<p align="center"><img src="docs/images/pods-running.png" alt="pods" width="75%"></p>
 
 ---
 
 ### 3. CI/CD Pipeline
 
-![CI/CD pipeline](docs/images/architecture/ci-cd-pipeline.png)
+<p align="center"><img src="docs/images/architecture/ci-cd-pipeline.png" alt="CI/CD pipeline" width="70%"></p>
 
 CI jobs `test`, `web` and `packages` run in parallel; `build` needs all three. On `main`, `trigger-deploy` starts the Jenkins CD stages in order. Vercel builds the web app from git pushes on its own.
 
-**GitHub Actions CI** triggers on push to `feature*` and `main`:
-![CI](docs/images/ci-pipeline.png)
-
-**Jenkins CD** (triggered by GitHub Actions on merge to `main`):
-![CD](docs/images/cd-pipeline.png)
+**GitHub Actions CI** runs on every push to `feature*` and `main`. **Jenkins CD** is triggered by GitHub Actions after a merge to `main`.
 
 **Setup Jenkins:**
 ```bash
@@ -520,10 +528,12 @@ docker exec hallucination-jenkins \
 ```
 
 GitHub Actions — CI pipeline passed:
-![Github](docs/images/github-actions.png)
+
+<p align="center"><img src="docs/images/github-actions.png" alt="Github" width="75%"></p>
 
 Jenkins — CD pipeline all stages green:
-![Jenkins](docs/images/jenkins-pipeline.png)
+
+<p align="center"><img src="docs/images/jenkins-pipeline.png" alt="Jenkins" width="75%"></p>
 
 **Required Jenkins credentials:**
 
@@ -550,7 +560,7 @@ Jenkins — CD pipeline all stages green:
 
 ## Model Training
 
-![Data and training pipeline](docs/images/architecture/data-training-pipeline.png)
+<p align="center"><img src="docs/images/architecture/data-training-pipeline.png" alt="Data and training pipeline" width="70%"></p>
 
 Notebooks clean the data; DVC versions it and runs the stages below (PhoBERT embeddings → 778 features → 5-fold LightGBM). MLflow keeps the runs and the model registry, with metadata in Cloud SQL and artifacts in GCS. Reviewer feedback from the audit database flows back into retraining.
 
@@ -584,11 +594,11 @@ infer            models + embeddings               -> artifacts/predictions/
 export_feedback  audits DB (reviewer feedback)     -> data/processed/feedback
 promote          artifacts/models/metadata.yaml    -> MLflow registry alias `production`
 ```
-DVC dag — pipeline dependency graph:
-![DVC](docs/images/dvc-dag.png)
+The stage graph is drawn in the diagram at the top of this section (`dvc dag` prints it in the terminal).
 
 MLflow — experiment runs comparing fold metrics:
-![MLflow](docs/images/mlflow-metric.png)
+
+<p align="center"><img src="docs/images/mlflow-metric.png" alt="MLflow" width="75%"></p>
 
 **Model performance (OOF):**
 - F1 Score: **0.8634** (v2.1; see [Phase 0 report](docs/reports/PHASE_0_FOUNDATION_FIX_REPORT.md))
@@ -609,13 +619,14 @@ python machine-learning/pipelines/promote.py
 ```
 
 MLflow model registry — production alias set on v2:
-![MLflow](docs/images/mlflow-registry.png)
+
+<p align="center"><img src="docs/images/mlflow-registry.png" alt="MLflow" width="75%"></p>
 
 ---
 
 ## API Usage
 
-![Serving pipeline](docs/images/architecture/serving-pipeline.png)
+<p align="center"><img src="docs/images/architecture/serving-pipeline.png" alt="Serving pipeline" width="70%"></p>
 
 Requests go through the NGINX gateway to the FastAPI backend. If `KSERVE_ENDPOINT` is set, the detector runs on KServe: the transformer builds the 778 features, the MLServer predictor scores them, and the transformer applies the guardrails. Otherwise the same two steps run in-process.
 
@@ -650,7 +661,7 @@ curl -X POST http://localhost:8080/api/predict \
 - `extrinsic` — Model introduces information not present in the context
 - `none` — No hallucination detected
 
-![RAG evaluation pipeline](docs/images/architecture/rag-evaluation-pipeline.png)
+<p align="center"><img src="docs/images/architecture/rag-evaluation-pipeline.png" alt="RAG evaluation pipeline" width="70%"></p>
 
 A RAG application (here `applications/rag-demo`) sends each draft answer to the guard before showing it. `pass` returns it; `regenerate` triggers one retry that lists the unsupported claims; `block` returns a safe fallback. Every call leaves an audit. Doubtful claims can go to the Claude judge agent, and reviewer feedback flows back into training.
 
@@ -711,7 +722,7 @@ The API uses this endpoint when `KSERVE_ENDPOINT` is set (prod values do); witho
 
 ## Monitoring & Observability
 
-![Observability pipeline](docs/images/architecture/observability-pipeline.png)
+<p align="center"><img src="docs/images/architecture/observability-pipeline.png" alt="Observability pipeline" width="70%"></p>
 
 The backend exposes Prometheus metrics, sends OpenTelemetry traces to Jaeger and logs to Loki (through Promtail). Audit exports feed the Evidently drift service, and Grafana shows all four.
 

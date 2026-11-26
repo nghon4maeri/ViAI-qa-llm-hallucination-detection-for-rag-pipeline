@@ -25,7 +25,7 @@ Kho lưu trữ đã có sẵn tệp cấu hình Blueprint [`render.yaml`](file:/
    ```
 2. Đăng nhập vào [Render Dashboard](https://dashboard.render.com).
 3. Nhấp vào **New +** $\rightarrow$ Chọn **Blueprint**.
-4. Chọn repository GitHub `vietnamese-llm-hallucination-detection`.
+4. Chọn repository GitHub `ViAI-qa-llm-hallucination-detection-for-rag-pipeline`.
 5. Render sẽ tự động đọc tệp `render.yaml` và tạo 3 tài nguyên:
    - **`viai-qa-db`**: Cơ sở dữ liệu PostgreSQL 15 quản lý.
    - **`viai-qa-backend`**: FastAPI Web Service (chạy migrations và phục vụ REST APIs tại `/api/v1/`).
@@ -41,7 +41,7 @@ SvelteKit trong repository đã được cấu hình tự động nhận diện 
 ### Các bước thực hiện:
 1. Đăng nhập vào [Vercel](https://vercel.com).
 2. Nhấp **Add New...** $\rightarrow$ **Project**.
-3. Import repository `vietnamese-llm-hallucination-detection`.
+3. Import repository `ViAI-qa-llm-hallucination-detection-for-rag-pipeline`.
 4. Trong phần **Project Settings**:
    - **Root Directory**: Chọn `frontend`.
    - **Framework Preset**: Chọn `SvelteKit`.

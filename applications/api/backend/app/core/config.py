@@ -22,7 +22,7 @@ except ImportError:
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Vietnamese AI Response QA"
+    PROJECT_NAME: str = "ViAI-QA: LLM Hallucination Detection for RAG Pipelines"
     VERSION: str = "0.1.0"
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")

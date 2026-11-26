@@ -1,6 +1,6 @@
 # applications/api/backend/app/core/metrics.py
 """
-Custom Prometheus metrics for Vietnamese AI Response QA.
+Custom Prometheus metrics for ViAI-QA.
 Exposed at /metrics by Prometheus Instrumentator.
 """
 from typing import Sequence

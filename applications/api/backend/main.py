@@ -61,7 +61,7 @@ if _HAS_OTEL:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Ensure database & default project exist
-    logger.info("Initializing Vietnamese AI Response QA Backend...")
+    logger.info("Initializing ViAI-QA backend...")
     try:
         ensure_database_exists()
         # Ensure schema tables exist

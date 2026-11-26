@@ -1,6 +1,6 @@
-# GKE Deployment Guide — Vietnamese LLM Hallucination Detection
+# GKE Deployment Guide — ViAI-QA
 
-This guide explains how to deploy the **Vietnamese LLM Hallucination Detection** system on **Google Kubernetes Engine (GKE)** using **Terraform**, **Ansible**, and **KServe**.
+This guide explains how to deploy the **ViAI-QA: LLM Hallucination Detection for RAG Pipelines** system on **Google Kubernetes Engine (GKE)** using **Terraform**, **Ansible**, and **KServe**.
 
 ---
 

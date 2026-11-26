@@ -1,5 +1,5 @@
 # Product Requirements Document (PRD)
-## Vietnamese AI Response QA (ViAI-QA)
+## ViAI-QA: LLM Hallucination Detection for RAG Pipelines
 
 - **Document Version:** 1.0.0
 - **Status:** Approved for Implementation (Sprint 1)

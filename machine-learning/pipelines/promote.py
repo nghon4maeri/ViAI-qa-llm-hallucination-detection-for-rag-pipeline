@@ -37,7 +37,7 @@ def ensure_model_exists(client: MlflowClient, model_name: str) -> None:
     except MlflowException:
         client.create_registered_model(
             name=model_name,
-            description="Vietnamese LLM Hallucination Detector (PhoBERT + LightGBM)",
+            description="ViAI-QA hallucination detector (PhoBERT + LightGBM)",
         )
         print(f"[INFO] Created registered model '{model_name}'")
 

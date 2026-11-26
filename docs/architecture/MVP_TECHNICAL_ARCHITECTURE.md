@@ -1,5 +1,5 @@
 # MVP Technical Architecture Document
-## Vietnamese AI Response QA (ViAI-QA)
+## ViAI-QA: LLM Hallucination Detection for RAG Pipelines
 
 - **Document Version:** 1.0.0
 - **Status:** Architectural Baseline

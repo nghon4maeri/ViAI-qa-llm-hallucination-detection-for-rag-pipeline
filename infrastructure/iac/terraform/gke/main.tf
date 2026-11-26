@@ -1,5 +1,5 @@
 # infrastructure/iac/terraform/gke/main.tf
-# GKE Cluster for Vietnamese LLM Hallucination Detection
+# GKE Cluster for ViAI-QA: LLM Hallucination Detection for RAG Pipelines
 # Region: asia-southeast1 (Singapore)
 # Node: e2-standard-4 (4 CPU, 16GB)
 
