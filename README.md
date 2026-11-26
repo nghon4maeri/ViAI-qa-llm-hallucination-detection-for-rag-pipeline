@@ -28,6 +28,17 @@
 ## System Architecture
 
 ![System](docs/images/overview.png)
+
+Each numbered path of the overview is drawn as its own pipeline diagram, next to the section that explains it. The diagrams are code: [`docs/diagrams/architecture.py`](docs/diagrams/architecture.py), built with [mingrammer/diagrams](https://diagrams.mingrammer.com) in the same Excalidraw style as the overview (Excalidraw's Virgil font, OFL). Regenerate them with `make diagrams`; this needs Graphviz plus `diagrams`, `cairosvg` and `fonttools` from `requirements/dev.txt`.
+
+| Pipeline | Overview steps | Section |
+|---|---|---|
+| Data, training and model registry (DVC + MLflow) | 1–6 | [Model Training](#model-training) |
+| Infrastructure provisioning and deployment | Terraform / Ansible paths | [GKE Deployment](#2-gke-deployment-terraform--ansible) |
+| CI/CD (GitHub Actions → Jenkins) | 7–11, 13 | [CI/CD Pipeline](#3-cicd-pipeline) |
+| Serving (API → KServe transformer → MLServer) | 12, 14, 15 | [API Usage](#api-usage) |
+| RAG evaluation and guard (medical domain) | platform layer | [API Usage](#api-usage) |
+| Observability (metrics, traces, logs, drift) | 16 | [Monitoring & Observability](#monitoring--observability) |
 ---
 ## Production Deployment Status
 
@@ -405,6 +416,10 @@ docker compose -f infrastructure/docker-compose.yml up -d nginx-gateway
 
 ### 2. GKE Deployment (Terraform & Ansible)
 
+![Infrastructure pipeline](docs/images/architecture/infrastructure-pipeline.png)
+
+Terraform creates the network, GKE cluster, Cloud SQL and secrets. Ansible installs cert-manager, KServe, MLflow and monitoring into the cluster. The Helm releases (by hand or from Jenkins) deploy the backend, the InferenceService, the gateway and the drift service. `deploy-minikube.sh` runs the same chart locally without cloud cost.
+
 **Configure GCP credentials:**
 ```bash
 gcloud auth login
@@ -486,6 +501,10 @@ All pods 2/2 Running:
 
 ### 3. CI/CD Pipeline
 
+![CI/CD pipeline](docs/images/architecture/ci-cd-pipeline.png)
+
+CI jobs `test`, `web` and `packages` run in parallel; `build` needs all three. On `main`, `trigger-deploy` starts the Jenkins CD stages in order. Vercel builds the web app from git pushes on its own.
+
 **GitHub Actions CI** triggers on push to `feature*` and `main`:
 ![CI](docs/images/ci-pipeline.png)
 
@@ -531,6 +550,10 @@ Jenkins — CD pipeline all stages green:
 
 ## Model Training
 
+![Data and training pipeline](docs/images/architecture/data-training-pipeline.png)
+
+Notebooks clean the data; DVC versions it and runs the stages below (PhoBERT embeddings → 778 features → 5-fold LightGBM). MLflow keeps the runs and the model registry, with metadata in Cloud SQL and artifacts in GCS. Reviewer feedback from the audit database flows back into retraining.
+
 **Setup environment:**
 ```bash
 conda create -n ai-engineer python=3.10
@@ -552,9 +575,14 @@ dvc pull
 dvc repro
 ```
 
-**Pipeline stages:**
+**Pipeline stages** (`dvc.yaml`, parameters in `machine-learning/params.yaml`):
 ```
-preprocess -> feature_extraction -> train_folds -> evaluate -> register_model
+build_medical    data/raw/vimedaqa                 -> data/processed/vimedhallu
+embed            data/raw/vihallu                  -> artifacts/features/phobert_embeddings.npy
+train            embeddings + vihallu + LLM probs  -> artifacts/models/{lgbm, metadata.yaml, feature_schema.json}  (+ MLflow run)
+infer            models + embeddings               -> artifacts/predictions/
+export_feedback  audits DB (reviewer feedback)     -> data/processed/feedback
+promote          artifacts/models/metadata.yaml    -> MLflow registry alias `production`
 ```
 DVC dag — pipeline dependency graph:
 ![DVC](docs/images/dvc-dag.png)
@@ -587,6 +615,10 @@ MLflow model registry — production alias set on v2:
 
 ## API Usage
 
+![Serving pipeline](docs/images/architecture/serving-pipeline.png)
+
+Requests go through the NGINX gateway to the FastAPI backend. If `KSERVE_ENDPOINT` is set, the detector runs on KServe: the transformer builds the 778 features, the MLServer predictor scores them, and the transformer applies the guardrails. Otherwise the same two steps run in-process.
+
 **Health check:**
 ```bash
 curl http://localhost:8080/health
@@ -617,6 +649,10 @@ curl -X POST http://localhost:8080/api/predict \
 
 - `extrinsic` — Model introduces information not present in the context
 - `none` — No hallucination detected
+
+![RAG evaluation pipeline](docs/images/architecture/rag-evaluation-pipeline.png)
+
+A RAG application (here `applications/rag-demo`) sends each draft answer to the guard before showing it. `pass` returns it; `regenerate` triggers one retry that lists the unsupported claims; `block` returns a safe fallback. Every call leaves an audit. Doubtful claims can go to the Claude judge agent, and reviewer feedback flows back into training.
 
 **Evaluate a RAG turn** (every answer sentence is checked against every retrieved chunk):
 ```bash
@@ -674,6 +710,10 @@ The API uses this endpoint when `KSERVE_ENDPOINT` is set (prod values do); witho
 ---
 
 ## Monitoring & Observability
+
+![Observability pipeline](docs/images/architecture/observability-pipeline.png)
+
+The backend exposes Prometheus metrics, sends OpenTelemetry traces to Jaeger and logs to Loki (through Promtail). Audit exports feed the Evidently drift service, and Grafana shows all four.
 
 | Service | Local URL | GKE |
 |---------|-----------|-----|

@@ -60,3 +60,7 @@ ansible>=10.0.0
 rich>=13.7.1
 typer>=0.12.5
 notebook>=7.1.0
+# README pipeline diagrams (docs/diagrams/architecture.py, `make diagrams`); also needs Graphviz `dot`
+diagrams==0.24.4
+cairosvg==2.8.2
+fonttools[woff]==4.60.1

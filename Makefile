@@ -1,4 +1,4 @@
-.PHONY: install test test-all test-ml run migrate pipeline up down frontend graph
+.PHONY: install test test-all test-ml run migrate pipeline up down frontend graph diagrams
 
 PY ?= python
 
@@ -34,3 +34,6 @@ frontend:
 
 graph:            ## Refresh the graphify knowledge graph after code changes
 	graphify update .
+
+diagrams:         ## Redraw the README pipeline diagrams (needs Graphviz `dot`)
+	python docs/diagrams/architecture.py
