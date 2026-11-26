@@ -279,6 +279,8 @@ vietnamese-llm-hallucination-detection/
 │   ├── pipelines/                  #   embed, train, infer, promote, build_medical, generate_hard,
 │   │                               #   export_feedback, evaluate_detector
 │   ├── scripts/                    #   model registry ops: pull, resolve storage URI, verify pipeline
+│   ├── vihallu_features/           #   the one feature builder (training, inference, API)
+│   ├── params.yaml                 #   pipeline settings tracked by DVC, logged to MLflow
 │   └── notebooks/                  #   EDA and research notebooks
 │
 ├── data/                           # Inputs, DVC-tracked

@@ -10,10 +10,17 @@ from tqdm import tqdm
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import vihallu_features as vf  # noqa: E402
 
-PHOBERT_MODEL = os.getenv("PHOBERT_MODEL", "vinai/phobert-base")
+import yaml  # noqa: E402
+
+# Pipeline settings: machine-learning/params.yaml (tracked by DVC, logged to MLflow)
+PARAMS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "params.yaml")
+with open(PARAMS_PATH) as _f:
+    PARAMS = yaml.safe_load(_f)
+
+PHOBERT_MODEL = os.getenv("PHOBERT_MODEL", PARAMS["embed"]["model"])
 PHOBERT_TOKENIZER = os.getenv("PHOBERT_TOKENIZER", PHOBERT_MODEL)
 DEVICE = "cpu"
-BATCH_SIZE = 8
+BATCH_SIZE = PARAMS["embed"]["batch_size"]
 
 DATA_PATH = "data/raw/vihallu/vihallu-train.csv"
 OUT_DIR = "artifacts/features"

@@ -9,8 +9,13 @@ stages:
       size: 10728910
     - path: machine-learning/pipelines/embed.py
       hash: md5
-      md5: db5d0a3b07c0f378063557eed4ef9aad
-      size: 1833
+      md5: b4ba40e0bc5946d89c34a75e959fbb95
+      size: 2143
+    params:
+      machine-learning/params.yaml:
+        embed:
+          model: vinai/phobert-base
+          batch_size: 8
     outs:
     - path: artifacts/features/phobert_embeddings.npy
       hash: md5
@@ -33,8 +38,20 @@ stages:
       size: 10728910
     - path: machine-learning/pipelines/train.py
       hash: md5
-      md5: 5a7e9f002df8648730e77dfc044ae3a0
-      size: 7563
+      md5: bc9eb0466de25d020b0f46cf194f6f56
+      size: 7785
+    params:
+      machine-learning/params.yaml:
+        train:
+          num_folds: 5
+          random_state: 42
+          lgbm:
+            objective: multiclass
+            num_class: 3
+            num_leaves: 64
+            learning_rate: 0.05
+            n_estimators: 300
+            n_jobs: 2
     outs:
     - path: artifacts/models/feature_schema.json
       hash: md5
@@ -103,8 +120,12 @@ stages:
       nfiles: 3
     - path: machine-learning/pipelines/build_medical_hallu.py
       hash: md5
-      md5: 72af19322296b0d35402a2824f62abc5
-      size: 6764
+      md5: f18efc24941f158085ddf949f1286dba
+      size: 6939
+    params:
+      machine-learning/params.yaml:
+        medical:
+          seed: 42
     outs:
     - path: data/processed/vimedhallu
       hash: md5

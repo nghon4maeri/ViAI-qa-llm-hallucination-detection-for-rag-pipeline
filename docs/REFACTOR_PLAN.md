@@ -1,6 +1,6 @@
 # Refactor Plan: Main Folders, Same Stack and Architecture
 
-**Status:** R1, R2, R3 and R6 done (2026-11-25); R4, R5 not started
+**Status:** R1, R2, R3, R5 and R6 done (2026-11-26); R4 not started (needs a cluster)
 **Constraint:** keep the tech stack and the architecture in the README: FastAPI + NGINX, PyTorch/HF + LightGBM, MLflow + DVC + MinIO/GCS, KServe/MLServer, Docker/Helm/GKE, Terraform/Ansible, GitHub Actions + Jenkins, Prometheus/Grafana/Loki/Jaeger/Evidently, SvelteKit. Nothing is removed. Code is moved, deduplicated, or wired up to match the design.
 
 ## 1. Why
@@ -145,7 +145,19 @@ Each phase is one commit (or PR). The full test suite and `svelte-check` must pa
 - Helm `hallucination-model` chart gains the transformer; `inference-service.yaml` references it.
 - The in-process engine stays for local development and for Render.
 
-### R5 Configuration and pipeline params
+### R5 Configuration and pipeline params ✅
+
+**Done:**
+- `machine-learning/params.yaml` holds `embed` (model, batch size), `train` (folds, seed, LightGBM hyper-parameters), `medical` (seed) and `generate_hard` (model, effort, n).
+- `dvc.yaml` declares them per stage (`params:` with the non-default file path), so `dvc params diff` and `dvc status` see changes. `train.py` logs the LightGBM parameters to MLflow.
+- Values are the old literals: the LightGBM estimator built from params has the same `get_params()` as before, and `build_medical` reproduces its locked output.
+- Requirements: removed the unused `requirements/test.txt` (nothing referenced it; CI uses `ci.txt`), and de-duplicated `opentelemetry-api` / `opentelemetry-sdk` in `ci.txt`.
+
+**Not done (on purpose):** generating the four requirement files from `pyproject.toml` extras with `pip-compile`. Each image needs a different, fully pinned set (torch CPU wheels, kserve, mlflow for serving vs. a light CI set), and a lock-everything step on this machine's network would take longer than it saves. The two drift bugs it was meant to prevent are fixed directly: instrumentator ≥ 8, and the CI image now has every test dependency, verified in a clean venv. Revisit with `uv pip compile` when dependency updates become routine.
+
+**Checks:** dev venv 111 passed; clean CI venv (`requirements/ci.txt` only) 108 passed + 2 intended skips, coverage 88%; `dvc status` up to date.
+
+**Original scope:**
 - `ml/params.yaml` (folds, seed, `JUDGE_*`, generator model, escalation threshold) is read by DVC (`params:`) and MLflow logging, so experiments are comparable.
 - Requirements: keep the four `requirements-*.txt` files (CI and images depend on them), but generate them from `pyproject.toml` extras (`serving`, `ml`, `dev`, `test`) with `pip-compile` so versions stop drifting.
 

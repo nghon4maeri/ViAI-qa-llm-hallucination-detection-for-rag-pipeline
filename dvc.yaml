@@ -2,6 +2,9 @@
 stages:
   build_medical:
     cmd: python machine-learning/pipelines/build_medical_hallu.py
+    params:
+      - machine-learning/params.yaml:
+          - medical
     deps:
       - machine-learning/pipelines/build_medical_hallu.py
       - data/raw/vimedaqa
@@ -10,6 +13,9 @@ stages:
 
   embed:
     cmd: python machine-learning/pipelines/embed.py
+    params:
+      - machine-learning/params.yaml:
+          - embed
     deps:
       - machine-learning/pipelines/embed.py
       - data/raw/vihallu/vihallu-train.csv
@@ -18,6 +24,9 @@ stages:
 
   train:
     cmd: python machine-learning/pipelines/train.py
+    params:
+      - machine-learning/params.yaml:
+          - train
     deps:
       - machine-learning/pipelines/train.py
       - artifacts/features/phobert_embeddings.npy

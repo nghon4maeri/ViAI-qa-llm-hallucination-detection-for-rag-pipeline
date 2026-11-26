@@ -21,12 +21,16 @@ import os
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
+import yaml
+
+with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "params.yaml")) as _f:
+    PARAMS = yaml.safe_load(_f)
 
 SRC_DIR = "data/raw/vimedaqa"
 OUT_DIR = "data/processed/vimedhallu-hard"
-MODEL = os.getenv("GENERATOR_MODEL", "claude-haiku-5-5")
-EFFORT = os.getenv("GENERATOR_EFFORT", "low")
-SEED = 42
+MODEL = os.getenv("GENERATOR_MODEL", PARAMS["generate_hard"]["model"])
+EFFORT = os.getenv("GENERATOR_EFFORT", PARAMS["generate_hard"]["effort"])
+SEED = PARAMS["medical"]["seed"]
 TOPICS = {0: "body-part", 1: "disease", 2: "drug", 3: "medicine"}
 
 INSTRUCTIONS = {
@@ -188,7 +192,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("step", choices=["submit", "collect"])
     ap.add_argument("--split", default="test", choices=["train", "validation", "test"])
-    ap.add_argument("--n", type=int, default=600)
+    ap.add_argument("--n", type=int, default=PARAMS["generate_hard"]["n"])
     args = ap.parse_args()
 
     import anthropic

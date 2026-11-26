@@ -19,11 +19,15 @@ import re
 from typing import Callable, List, Optional
 
 import pandas as pd
+import yaml
+
+with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "params.yaml")) as _f:
+    PARAMS = yaml.safe_load(_f)
 
 SRC_DIR = "data/raw/vimedaqa"
 OUT_DIR = "data/processed/vimedhallu"
 SPLITS = ["train", "validation", "test"]
-SEED = 42
+SEED = PARAMS["medical"]["seed"]
 TOPICS = {0: "body-part", 1: "disease", 2: "drug", 3: "medicine"}
 
 # Longest phrase first so "không nên" is matched before "nên"

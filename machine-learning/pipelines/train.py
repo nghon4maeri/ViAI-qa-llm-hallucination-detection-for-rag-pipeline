@@ -25,11 +25,18 @@ from mlflow.models import infer_signature
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import vihallu_features as vf  # noqa: E402
 
+import yaml  # noqa: E402
+
+# Pipeline settings: machine-learning/params.yaml (tracked by DVC, logged to MLflow)
+PARAMS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "params.yaml")
+with open(PARAMS_PATH) as _f:
+    PARAMS = yaml.safe_load(_f)
+
 
 EXPERIMENT_NAME = "vihallu-pipeline"
 MODEL_NAME      = os.getenv("MLFLOW_MODEL_NAME", "vihallu-detector")
-NUM_FOLDS       = 5
-RANDOM_STATE    = 42
+NUM_FOLDS       = PARAMS["train"]["num_folds"]
+RANDOM_STATE    = PARAMS["train"]["random_state"]
 
 LABEL_MAP = vf.LABEL_MAP
 FEAT_DIMS = vf.FEATURE_GROUPS
@@ -151,6 +158,7 @@ def main():
             "git_commit":   get_git_commit(),
             "model_name":   MODEL_NAME,
         })
+        mlflow.log_params({f"lgbm_{k}": v for k, v in PARAMS["train"]["lgbm"].items()})
 
         os.makedirs("artifacts/models/lgbm", exist_ok=True)
         # Serving needs the same centroid as build_cosine_sim(); ships with the fold models
@@ -164,15 +172,7 @@ def main():
         )
 
         for fold, (tr_idx, va_idx) in enumerate(skf.split(X, y)):
-            clf = lgb.LGBMClassifier(
-                objective="multiclass",
-                num_class=3,
-                num_leaves=64,
-                learning_rate=0.05,
-                n_estimators=300,
-                random_state=RANDOM_STATE,
-                n_jobs=2,
-            )
+            clf = lgb.LGBMClassifier(**PARAMS["train"]["lgbm"], random_state=RANDOM_STATE)
             clf.fit(X[tr_idx], y[tr_idx])
 
             fold_preds          = clf.predict_proba(X[va_idx])
