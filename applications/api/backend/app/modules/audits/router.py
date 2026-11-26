@@ -8,6 +8,7 @@ from backend.app.core.database import get_db
 from backend.app.core.config import settings
 from backend.app.evaluation.interfaces import EvaluationEngine
 from backend.app.evaluation.adapters.existing_pipeline import ExistingPipelineAdapter
+from backend.app.evaluation.adapters.kserve_engine import KServeEngine
 from backend.app.evaluation.adapters.mock_engine import MockEngine
 from backend.app.modules.audits.repository import AuditRepository
 from backend.app.modules.audits.service import AuditService
@@ -31,6 +32,8 @@ def get_engine() -> EvaluationEngine:
     if _global_engine is None:
         if settings.DISABLE_MODEL:
             _global_engine = MockEngine()
+        elif settings.KSERVE_ENDPOINT:
+            _global_engine = KServeEngine(settings.KSERVE_ENDPOINT)
         else:
             _global_engine = ExistingPipelineAdapter()
     return _global_engine

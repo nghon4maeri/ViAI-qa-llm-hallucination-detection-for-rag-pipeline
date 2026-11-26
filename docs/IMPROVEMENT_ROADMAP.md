@@ -48,7 +48,7 @@ RAG pipeline ──SDK / REST / MCP──▶ ViAI-QA Backend (FastAPI, existing 
 | `/api/predict`, `/api/v1/audits` | Kept. A single context is a RAG turn with one chunk |
 | Qwen judge prompt (`_get_vistral_probs`) | Local/offline LLM fallback for the agent |
 | DVC + MLflow + feedback table | Flywheel: feedback and synthetic data → retrain → `auto_promote_registry.py` |
-| KServe + `kserve_adapter.py` | Detector served separately from the API |
+| KServe transformer (`kserve_transformer.py`) + MLServer predictor | Detector served separately from the API (R4) |
 | Prometheus / Grafana / Evidently / Jaeger | RAG metrics, drift on faithfulness, one span per agent tool call |
 | SvelteKit frontend | Kept and redesigned (Phase 5) |
 

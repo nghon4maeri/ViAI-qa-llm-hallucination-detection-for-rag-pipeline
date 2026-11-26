@@ -193,7 +193,9 @@ def main():
         mlflow.log_metric("oof_macro_f1", oof_f1)
         print(f"[INFO] OOF macro F1: {oof_f1:.4f}")
 
-        sample_input  = pd.DataFrame(X[:5])
+        # tensor signature (ndarray float64, shape (-1, 778)): MLServer's MLflow runtime rejects the integer
+        # column names a DataFrame of X would give, so the KServe predictor could not load the model
+        sample_input  = np.asarray(X[:5], dtype=np.float64)
         sample_output = pd.DataFrame(
             np.zeros((5, 3)),
             columns=["prob_extrinsic", "prob_no", "prob_intrinsic"],
@@ -207,8 +209,8 @@ def main():
             signature=signature,
             input_example=sample_input,
             pip_requirements=[
-                "lightgbm",
-                "mlflow==2.11.3",
+                f"lightgbm=={lgb.__version__}",
+                f"mlflow=={mlflow.__version__}",  # the pickle must be loaded by the mlflow that wrote it
                 "numpy",
                 "pandas",
                 "scikit-learn",

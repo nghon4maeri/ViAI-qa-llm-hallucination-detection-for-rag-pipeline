@@ -653,7 +653,15 @@ ISVC_URL=http://hallucination-detector.hallucination-prod.136.110.57.217.nip.io
 
 curl $ISVC_URL/v2/health/live
 curl $ISVC_URL/v2/models/hallucination-detector
+
+# text in, verdict out: the transformer builds the 778 features, MLServer scores them, guardrails decide
+curl -X POST $ISVC_URL/v2/models/hallucination-detector/infer -H 'Content-Type: application/json' -d '{
+  "inputs": [{"name": "context",  "datatype": "BYTES", "shape": [1], "data": ["Hà Nội là thủ đô của Việt Nam."]},
+             {"name": "prompt",   "datatype": "BYTES", "shape": [1], "data": ["Thủ đô Việt Nam là gì?"]},
+             {"name": "response", "datatype": "BYTES", "shape": [1], "data": ["Thủ đô là Hà Nội."]}]}'
+# -> outputs: label, confidence, breakdown (JSON)
 ```
+The API uses this endpoint when `KSERVE_ENDPOINT` is set (prod values do); without it the detector runs in-process.
 
 ---
 

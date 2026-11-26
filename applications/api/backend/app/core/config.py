@@ -1,6 +1,6 @@
 # applications/api/backend/app/core/config.py
 import os
-from typing import List, Union
+from typing import List, Optional, Union
 
 from pathlib import Path
 
@@ -40,6 +40,8 @@ class Settings(BaseSettings):
 
     # Model Serving
     DISABLE_MODEL: bool = os.getenv("DISABLE_MODEL", "false").lower() == "true"
+    # set -> detector runs remotely on KServe (V2 infer URL); unset -> in-process pipeline
+    KSERVE_ENDPOINT: Optional[str] = os.getenv("KSERVE_ENDPOINT") or None
     MODEL_VERSION: str = os.getenv("MODEL_VERSION", "1.0.0")
     # Repo checkout: <repo>/artifacts/models. Container: /app/models (MODELS_DIR, or "models" under WORKDIR /app)
     MODELS_DIR: str = os.getenv("MODELS_DIR", str(_REPO_ROOT / "artifacts" / "models") if _REPO_ROOT else "models")

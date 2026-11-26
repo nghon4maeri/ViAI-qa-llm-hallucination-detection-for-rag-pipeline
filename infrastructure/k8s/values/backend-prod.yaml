@@ -36,7 +36,7 @@ env:
   MLFLOW_MODEL_NAME: vihallu-detector
   MLFLOW_MODEL_ALIAS: production
 
-  # KServe endpoint (backend calls KServe for inference)
+  # KServe endpoint: when set, the backend sends every detection here instead of loading models
   KSERVE_ENDPOINT: "http://hallucination-detector.hallucination-prod.svc.cluster.local/v2/models/hallucination-detector/infer"
 
   # Tracing

@@ -38,8 +38,8 @@ stages:
       size: 10728910
     - path: machine-learning/pipelines/train.py
       hash: md5
-      md5: bc9eb0466de25d020b0f46cf194f6f56
-      size: 7785
+      md5: 1f3ec16bd569a4c186f867027f4267ef
+      size: 8103
     params:
       machine-learning/params.yaml:
         train:

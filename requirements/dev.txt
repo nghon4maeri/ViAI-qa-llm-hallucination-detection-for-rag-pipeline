@@ -47,7 +47,7 @@ black>=24.8.0
 isort>=5.13.2
 pre-commit>=3.7.0
 
-kserve>=0.13.0
+kserve==0.16.0  # same as the backend image (transformer tested on it)
 kubernetes>=29.0.0
 grpcio>=1.64.0
 python-dotenv>=1.0.1

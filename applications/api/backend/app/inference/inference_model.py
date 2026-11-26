@@ -266,84 +266,80 @@ class HallucinationPipeline:
             return "extrinsic"
         return "no"
 
-    def predict(self, context, prompt, response) -> Dict[str, Union[str, float]]:
-        if self.disabled:
-            return {"label": "no", "confidence": 1.0}
-        
+    def extract_signals(self, context, prompt, response) -> Dict[str, Any]:
+        """
+        Everything except the LightGBM vote: the 778 features plus the NLI / NER / LLM signals the
+        guardrails use. The in-process engine and the KServe transformer both call this, so serving
+        paths cannot diverge.
+        """
         if not self._is_loaded:
             self._load_models()
 
-        logger.info("\n--- PROCESSING REQUEST (GUARDRAIL V3: EXTRINSIC HUNTER) ---")
         c, p, r = str(context).strip(), str(prompt).strip(), str(response).strip()
-
         f_embed = self._extract_embeddings([vf.embedding_text(c, p, r)])
 
         # NLI / NER are not LightGBM features; they drive the guardrails and the breakdown
         p_entail, p_neutral, p_contra = self._get_nli_features(c, r)
-        
-        logger.info(f"- [NLI Debug] Contra (Int): {p_contra:.4f} | Neu (Ext): {p_neutral:.4f} | Entail (No): {p_entail:.4f}")
-
+        logger.info(f"- [NLI] contra {p_contra:.4f} | neutral {p_neutral:.4f} | entail {p_entail:.4f}")
         f_ner = self._get_ner_features(c, r)
-        new_entity_count = f_ner[0][0]
-        overlap_ratio = f_ner[0][1]
-        logger.info(f"- [NER Debug] New Entities: {new_entity_count} | Overlap: {overlap_ratio:.2f}")
+        logger.info(f"- [NER] new entities {f_ner[0][0]} | overlap {f_ner[0][1]:.2f}")
+        f_vistral = self._get_vistral_probs(c, p, r)  # [ext, int, no]
+        logger.info(f"- [LLM] ext {f_vistral[0][0]:.4f} | int {f_vistral[0][1]:.4f} | no {f_vistral[0][2]:.4f}")
 
-        logger.info("- Asking Vistral...")
-        f_vistral = self._get_vistral_probs(c, p, r)
-        logger.info(f"- [Vistral Debug] Ext: {f_vistral[0][0]:.4f} | Int: {f_vistral[0][1]:.4f} | No: {f_vistral[0][2]:.4f}")
+        return {
+            # training column order for the LLM probabilities is [no, ext, int]
+            "features": self._build_model_features(f_embed, c, p, r, f_vistral[:, [2, 0, 1]]),
+            "p_entailment": float(p_entail),
+            "p_neutral": float(p_neutral),
+            "p_contradiction": float(p_contra),
+            "new_entity_count": int(f_ner[0][0]),
+            "entity_overlap_ratio": float(f_ner[0][1]),
+            "vistral_extrinsic_prob": float(f_vistral[0][0]),
+        }
 
-        # f_vistral is [ext, int, no]; training column order is [no, ext, int]
-        x_final = self._build_model_features(f_embed, c, p, r, f_vistral[:, [2, 0, 1]])
-        preds = self._predict_ensemble(x_final)
-        
-        class_id = np.argmax(preds[0])
-        confidence = preds[0][class_id]
-        original_label = self.labels.get(int(class_id), "Unknown")
-        logger.info(f"- [LightGBM Opinion] Label: {original_label} ({confidence:.4f})")
+    def decide(self, probs, signals: Dict[str, Any]) -> Dict[str, Union[str, float, None]]:
+        """LightGBM class probabilities [ext, no, int] + signals -> final verdict (guardrail v3)."""
+        probs = np.asarray(probs, dtype=float).reshape(-1)
+        class_id = int(np.argmax(probs))
+        confidence = probs[class_id]
+        original_label = self.labels.get(class_id, "Unknown")
+        logger.info(f"- [LightGBM] {original_label} ({confidence:.4f})")
 
+        p_entail = signals["p_entailment"]
+        p_neutral = signals["p_neutral"]
+        p_contra = signals["p_contradiction"]
+        new_entity_count = signals["new_entity_count"]
+        vistral_ext = signals["vistral_extrinsic_prob"]
         active_guardrail = None
 
         if p_contra > 0.5:
-            logger.info("GUARDRAIL: NLI Contradiction cao -> Force Intrinsic")
-            final_label = self._normalize_label("Intrinsic Hallucination")
-            final_conf = float(p_contra)
-            active_guardrail = "NLI_CONTRADICTION_HIGH"
+            final_label, final_conf, active_guardrail = "intrinsic", float(p_contra), "NLI_CONTRADICTION_HIGH"
         elif p_neutral > 0.45 and p_entail < 0.5:
-            logger.info("GUARDRAIL: NLI Neutral cao (Thong tin ngoai le) -> Force Extrinsic")
-            final_label = self._normalize_label("Extrinsic Hallucination")
-            final_conf = float(p_neutral)
-            active_guardrail = "NLI_NEUTRAL_HIGH"
+            final_label, final_conf, active_guardrail = "extrinsic", float(p_neutral), "NLI_NEUTRAL_HIGH"
         elif new_entity_count >= 1 and class_id == 1 and p_entail < 0.9:
-            logger.info("GUARDRAIL: Có thuc the la va Entailment khong tuyet doi -> Force Extrinsic")
-            final_label = "extrinsic"
-            final_conf = 0.85
-            active_guardrail = "NEW_ENTITY_MISMATCH"
-        elif f_vistral[0][0] > 0.6:
-            logger.info("GUARDRAIL: Vistral vote Extrinsic rat cao -> Force Extrinsic")
-            final_label = "extrinsic"
-            final_conf = float(f_vistral[0][0])
-            active_guardrail = "VISTRAL_EXTRINSIC_HIGH"
+            final_label, final_conf, active_guardrail = "extrinsic", 0.85, "NEW_ENTITY_MISMATCH"
+        elif vistral_ext > 0.6:
+            final_label, final_conf, active_guardrail = "extrinsic", float(vistral_ext), "VISTRAL_EXTRINSIC_HIGH"
         elif p_contra > 0.35 and class_id == 1:
-            logger.info("Soft Warning: Co tin hieu mau thuan nhe. Tra ve Intrinsic.")
-            final_label = "intrinsic"
-            final_conf = float(p_contra)
-            active_guardrail = "SOFT_CONTRADICTION"
+            final_label, final_conf, active_guardrail = "intrinsic", float(p_contra), "SOFT_CONTRADICTION"
         else:
-            final_label = self._normalize_label(original_label)
-            final_conf = float(confidence)
+            final_label, final_conf = self._normalize_label(original_label), float(confidence)
+        if active_guardrail:
+            logger.info(f"GUARDRAIL {active_guardrail} -> {final_label}")
 
         return {
             "label": final_label,
             "confidence": final_conf,
-            "p_entailment": float(p_entail),
-            "p_neutral": float(p_neutral),
-            "p_contradiction": float(p_contra),
-            "new_entity_count": int(new_entity_count),
-            "entity_overlap_ratio": float(overlap_ratio),
-            "vistral_extrinsic_prob": float(f_vistral[0][0]),
-            "active_guardrail": active_guardrail
+            **{k: v for k, v in signals.items() if k != "features"},
+            "active_guardrail": active_guardrail,
         }
-    
+
+    def predict(self, context, prompt, response) -> Dict[str, Union[str, float]]:
+        if self.disabled:
+            return {"label": "no", "confidence": 1.0}
+        signals = self.extract_signals(context, prompt, response)
+        return self.decide(self._predict_ensemble(signals["features"])[0], signals)
+
 _pipeline_instance = None
 
 def get_hallu_model() -> HallucinationPipeline:

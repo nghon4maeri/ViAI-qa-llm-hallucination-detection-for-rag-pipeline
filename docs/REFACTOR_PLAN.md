@@ -1,6 +1,6 @@
 # Refactor Plan: Main Folders, Same Stack and Architecture
 
-**Status:** R1, R2, R3, R5 and R6 done (2026-11-26); R4 not started (needs a cluster)
+**Status:** R1–R6 done (2026-11-26). R4 is verified locally against real MLServer + kserve; it has not run on a cluster yet
 **Constraint:** keep the tech stack and the architecture in the README: FastAPI + NGINX, PyTorch/HF + LightGBM, MLflow + DVC + MinIO/GCS, KServe/MLServer, Docker/Helm/GKE, Terraform/Ansible, GitHub Actions + Jenkins, Prometheus/Grafana/Loki/Jaeger/Evidently, SvelteKit. Nothing is removed. Code is moved, deduplicated, or wired up to match the design.
 
 ## 1. Why
@@ -139,7 +139,37 @@ Each phase is one commit (or PR). The full test suite and `svelte-check` must pa
 - Update `Dockerfile`s (build contexts), Compose, GH Actions, Jenkins `HELM_CHART_PATH` / `dir()` paths, Ansible relative paths, `dvc.yaml` outs + `dvc.lock`, `.coveragerc`, `pyproject` testpaths, `alembic.ini` `script_location`, and the README/doc links.
 - `backend` stays the package name, so imports are unchanged. Only the paths on `sys.path` and in Docker change.
 
-### R4 Serving matches the architecture (KServe)
+### R4 Serving matches the architecture (KServe) ✅ (locally verified)
+
+**Done:**
+```
+API (KServeEngine) --V2 {context, prompt, response}--> transformer (backend image, kserve 0.16)
+   extract_signals: PhoBERT + LLM probs -> 778 features; NLI + NER signals
+   --V2 FP64 [1, 778]--> predictor (MLServer 1.7.1, MLflow pyfunc, 5 LightGBM folds)
+   <--prob_extrinsic / prob_no / prob_intrinsic--
+   decide: guardrail v3
+<--label, confidence, breakdown (JSON)--
+```
+- `HallucinationPipeline.predict` is split into `extract_signals` and `decide`, with the guardrail thresholds unchanged (pinned by `tests/api/test_guardrails.py`, 9 cases). The in-process engine and the transformer call the same two methods, so both paths give the same answer.
+- `backend/app/inference/kserve_transformer.py` replaces `kserve_adapter.py`, which forwarded raw text to a predictor that expects 778 numbers. `predict()` is overridden, so one coroutine holds a request's signals; feature extraction runs in a thread.
+- `KServeEngine` (`evaluation/adapters/kserve_engine.py`) is selected when `KSERVE_ENDPOINT` is set (`backend-prod.yaml` already sets it). Otherwise the in-process engine is used (local, Render), and `DISABLE_MODEL` selects the mock. One setting replaces the `EVALUATION_ENGINE` switch the plan proposed.
+- Guardrails run in the transformer, not the API as planned. The API then needs no NLI/NER weights (its pod has 1 Gi), and the breakdown comes back as one JSON output.
+- InferenceService (raw manifest + Helm chart) gains a `transformer` (backend image, `--predictor_protocol v2`, 4–6 Gi). The runtime moves to `seldonio/mlserver:1.7.1`; 1.5.0 is no longer on PyPI and bundles an old mlflow.
+
+**Bugs found by running the real servers (fake-based tests did not catch them):**
+- `train.py` logged the signature from `pd.DataFrame(X)`, which has integer column names. MLServer's MLflow runtime refuses to load such a model (`MetadataTensor name: Input should be a valid string`), so the predictor could never have started. It is now a tensor signature (`float64`, `(-1, 778)`).
+- `train.py` pinned `mlflow==2.11.3` in the model's requirements while logging with mlflow 3.10. The pickle must be loaded by the version that wrote it. The pins are now the running versions of mlflow and lightgbm. The old run `3805bb2e…` (mlflow 2.11) cannot be loaded by today's stack; retrain + promote produces a servable one.
+- kserve ≥ 0.15 reads `--predictor_protocol` (default v1, which MLServer does not serve), and V2 responses need an `id`.
+
+**Checks:**
+- Real MLServer 1.7.1 serving a pyfunc saved from the current folds returns exactly the probabilities of the local boosters.
+- Full round trip `KServeEngine` → real kserve 0.16 transformer → MLServer: 4/4 verdicts equal the in-process `decide`, at 12–47 ms per call without model loading. `extract_signals` was stubbed there because the NLI/NER weights are not on this machine.
+- `dvc repro train` with the fixed `train.py`: OOF macro F1 0.8634, and the 5 fold files are byte-identical to the previous ones. The model it logged (tensor signature, mlflow 3.10 / lightgbm 4.7 pins) loads in MLServer and returns the local boosters' probabilities.
+- `tests/api/test_kserve.py` (7 tests).
+
+**Not verified:** a cluster deploy. The first deploy needs `hf-token` (optional) and `ghcr-secret` in the namespace, and the transformer's first start downloads the NLI/NER models (the readiness probe allows ~6 min). The backend image with kserve 0.16 has not been rebuilt here (torch download).
+
+**Original plan:**
 - `services/model-transformer`: a KServe transformer that uses `vihallu_features` (PhoBERT + LLM probs) to turn `{context, prompt, response}` into the 778-dim vector for the existing MLflow/MLServer predictor (`mlflow-runtime`).
 - New `KServeEngine` adapter in the API, behind the existing `EvaluationEngine` protocol, chosen by `EVALUATION_ENGINE=kserve|inprocess|mock`. NLI/NER guardrails stay in the API, so the breakdown keeps working.
 - Helm `hallucination-model` chart gains the transformer; `inference-service.yaml` references it.
@@ -183,7 +213,7 @@ Each phase is one commit (or PR). The full test suite and `svelte-check` must pa
   - web: lint / check / vitest / build exit 0
   - packages job simulated in a fresh venv
 
-**Not done:** a Jenkins stage for the KServe transformer image waits on R4.
+**Not done:** a separate Jenkins stage for the transformer image is unnecessary, because the transformer runs from the backend image the pipeline already builds.
 
 **Original scope:**
 - GH Actions adds a frontend job (`npm ci`, `svelte-check`, `vitest`, `vite build`) and an SDK job (`pytest tests/sdk`). `tests/ml` stays opt-in because it needs `dvc pull`.

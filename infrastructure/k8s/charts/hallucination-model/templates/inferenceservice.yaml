@@ -10,6 +10,37 @@ metadata:
     autoscaling.knative.dev/target: {{ .Values.model.scaleTarget | quote }}
     autoscaling.knative.dev/scaleToZeroGracePeriod: {{ .Values.model.scaleToZeroGracePeriod | quote }}
 spec:
+  # text -> 778 features -> predictor -> guardrails (backend/app/inference/kserve_transformer.py)
+  transformer:
+    imagePullSecrets:
+      - name: ghcr-secret
+    containers:
+      - name: kserve-container
+        image: {{ .Values.transformer.image }}
+        command: ["python", "-m", "backend.app.inference.kserve_transformer"]
+        # KServe appends --model_name and --predictor_host
+        args: ["--predictor_protocol", "v2", "--http_port", "8080"]
+        env:
+          - name: HF_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: hf-token
+                key: HF_TOKEN
+                optional: true
+        resources:
+          requests:
+            cpu: "1"
+            memory: "{{ .Values.transformer.memoryRequest }}"
+          limits:
+            cpu: "2"
+            memory: "{{ .Values.transformer.memoryLimit }}"
+        readinessProbe:
+          httpGet:
+            path: /v2/health/ready
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 30
   predictor:
     model:
       modelFormat:

@@ -20,3 +20,9 @@ model:
     limits:
       cpu: "2"
       memory: "4Gi"
+
+# KServe transformer: the backend image (PhoBERT + NLI + NER + LLM features, then guardrails)
+transformer:
+  image: ghcr.io/nhnammldlnlpcvrs/hallucination-backend:latest
+  memoryRequest: "4Gi"
+  memoryLimit: "6Gi"

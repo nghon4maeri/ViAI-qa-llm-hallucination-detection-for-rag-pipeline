@@ -11,7 +11,7 @@ spec:
     - v2
   containers:
     - name: kserve-container
-      image: docker.io/seldonio/mlserver:1.5.0
+      image: docker.io/seldonio/mlserver:1.7.1
       env:
         - name: MLSERVER_HTTP_PORT
           value: "8080"

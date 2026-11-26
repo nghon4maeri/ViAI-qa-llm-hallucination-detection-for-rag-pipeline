@@ -27,3 +27,9 @@ model:
   secrets:
     mlflow: mlflow-secret
     aws: aws-credentials
+
+# KServe transformer: the backend image (PhoBERT + NLI + NER + LLM features, then guardrails)
+transformer:
+  image: ghcr.io/nhnammldlnlpcvrs/hallucination-backend:latest
+  memoryRequest: "4Gi"
+  memoryLimit: "6Gi"
