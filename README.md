@@ -628,7 +628,11 @@ MLflow model registry — production alias set on v2:
 
 <p align="center"><img src="docs/images/architecture/serving-pipeline.png" alt="Serving pipeline" width="70%"></p>
 
+<p align="center"><img src="docs/images/architecture/rag-evaluation-pipeline.png" alt="RAG evaluation pipeline" width="70%"></p>
+
 Requests go through the NGINX gateway to the FastAPI backend. If `KSERVE_ENDPOINT` is set, the detector runs on KServe: the transformer builds the 778 features, the MLServer predictor scores them, and the transformer applies the guardrails. Otherwise the same two steps run in-process.
+
+A RAG application (here `applications/rag-demo`) sends each draft answer to the guard before showing it. `pass` returns it; `regenerate` triggers one retry that lists the unsupported claims; `block` returns a safe fallback. Every call leaves an audit. Doubtful claims can go to the Claude judge agent, and reviewer feedback flows back into training.
 
 **Health check:**
 ```bash
@@ -660,10 +664,6 @@ curl -X POST http://localhost:8080/api/predict \
 
 - `extrinsic` — Model introduces information not present in the context
 - `none` — No hallucination detected
-
-<p align="center"><img src="docs/images/architecture/rag-evaluation-pipeline.png" alt="RAG evaluation pipeline" width="70%"></p>
-
-A RAG application (here `applications/rag-demo`) sends each draft answer to the guard before showing it. `pass` returns it; `regenerate` triggers one retry that lists the unsupported claims; `block` returns a safe fallback. Every call leaves an audit. Doubtful claims can go to the Claude judge agent, and reviewer feedback flows back into training.
 
 **Evaluate a RAG turn** (every answer sentence is checked against every retrieved chunk):
 ```bash
