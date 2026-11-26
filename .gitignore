@@ -72,3 +72,7 @@ docs/.svelte-kit-old
 *.egg-info/
 machine-learning/build/
 client-sdk/python/build/
+
+# graphify knowledge graph (local tooling, rebuilt by `graphify update .`)
+graphify-out/
+.graphifyignore
