@@ -273,7 +273,8 @@ vietnamese-llm-hallucination-detection/
 │   │   │                           #   monitoring, legacy), evaluation (RAG evaluator, judge agent), inference
 │   │   ├── backend/alembic/        #   migrations 001-004
 │   │   └── alembic.ini
-│   └── web/                        # SvelteKit UI (RAG trace view, audits, datasets)
+│   ├── web/                        # SvelteKit UI (RAG trace view, audits, datasets)
+│   └── rag-demo/                   # medical RAG chatbot guarded by ViAI-QA (Phase 6 demo)
 │
 ├── machine-learning/                             # Model lifecycle (run by DVC)
 │   ├── pipelines/                  #   embed, train, infer, promote, build_medical, generate_hard,

@@ -9,7 +9,7 @@ requires-python = ">=3.10"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # `backend` lives in applications/api, the shared `vihallu_features` package in machine-learning/
-pythonpath = ["applications/api", "machine-learning", "."]
+pythonpath = ["applications/api", "applications/rag-demo", "client-sdk/python", "machine-learning", "."]
 markers = [
     "slow: very slow tests (LLMs, transformers, GPU, large models)",
     "integration: full pipeline tests",

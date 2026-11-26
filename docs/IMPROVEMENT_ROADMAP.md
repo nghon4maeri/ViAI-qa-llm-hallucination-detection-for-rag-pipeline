@@ -1,6 +1,6 @@
 # ViAI-QA Improvement Roadmap: RAG Evaluation & Guardrail Platform
 
-**Status:** Phases 0, 1, 2, 3, 4 and 5 (first pass) done. Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](reports/PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Medical dataset built; the baseline is blocked on downloading the Qwen weights (see [MEDICAL_DOMAIN.md](architecture/MEDICAL_DOMAIN.md)). Phase 5 first pass done.
+**Status:** Phases 0–6 done (Phase 5 first pass; Phases 2 and 6 await a live ANTHROPIC_API_KEY run). Phase 0 done (see [PHASE_0_FOUNDATION_FIX_REPORT.md](reports/PHASE_0_FOUNDATION_FIX_REPORT.md)). Phase 1 done. Medical dataset built; the baseline is blocked on downloading the Qwen weights (see [MEDICAL_DOMAIN.md](architecture/MEDICAL_DOMAIN.md)). Phase 5 first pass done.
 
 ## Domain focus
 
@@ -180,7 +180,13 @@ Haiku 5.5 has no server-side refusal fallback, so the `fallbacks` parameter is s
 - Keep SvelteKit. Use `unslop` and `ui-ux-pro-max` as design skills; port `animate-ui` patterns with `svelte/motion` or `motion`.
 - New views: RAG trace view (sentence highlights linked to evidence chunks), agent timeline, eval-run dashboard. Existing views are restyled.
 
-### Phase 6: End-to-end demo
+### Phase 6: End-to-end demo ✅ (built; live answers need ANTHROPIC_API_KEY)
+
+**Done (2026-11-26):** `applications/rag-demo`. ViMedAQA passages are stored in Postgres/SQLite (`rag_passages`) and retrieved with character n-gram TF-IDF; answers come from `claude-haiku-5-5` at effort `low`. The ViAI-QA guard then returns pass, regenerate (one guided, append-only retry) or block / refusal (safe fallback). Every turn leaves an audit for the trace view.
+
+**Retrieval was measured before choosing:** TF-IDF recall@3 is 0.80, against 0.67 for pgvector + LSA-512 and 0.31 for pgvector + mean-pooled PhoBERT. pgvector waits for a Vietnamese bi-encoder that the current network can download. The ingest of 17,958 passages takes ~1 s, the index ~4.5 s, and a query ~60 ms. Tests: `tests/demo/` (7), with Claude faked and the guard real. See `applications/rag-demo/README.md`.
+
+**Original plan:**
 - Small Vietnamese RAG on pgvector (existing Postgres) that calls ViAI-QA through the SDK.
 
 ## Order
