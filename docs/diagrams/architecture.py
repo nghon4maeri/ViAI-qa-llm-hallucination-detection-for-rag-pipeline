@@ -96,16 +96,27 @@ def icon(name: str, label: str) -> Custom:
     return Custom(label, os.path.join(ICON, f"{name}.png"))
 
 
-def flow(label: str = "", outside: bool = False, **kw) -> Edge:
-    """Hand-drawn style edge. Edge() hardcodes Sans-Serif, so the font is set here on every edge.
-    outside=True uses xlabel, which keeps the label off a cluster title the edge crosses."""
+def flow(label: str = "", outside: bool = False, side: bool = False, **kw) -> Edge:
+    """
+    Hand-drawn style edge. Edge() hardcodes Sans-Serif, so the font is set here on every edge.
+    outside=True uses xlabel, which keeps the label off a cluster title the edge crosses.
+    side=True (constraint=false) draws the edge without letting it rank nodes: return paths and side
+    branches stay visible but do not push nodes into new rows, so the main flow stays one row.
+    """
     text = {"xlabel": label} if outside else {"label": label}
-    return Edge(**text, **{**EDGE, **kw})
+    extra = {"constraint": "false"} if side else {}
+    return Edge(**text, **{**EDGE, **extra, **kw})
 
 
-def diagram(title: str, name: str, direction: str = "LR") -> Diagram:
+def place() -> Edge:
+    """Invisible edge that only puts a node one column to the right of another."""
+    return Edge(style="invis")
+
+
+def diagram(title: str, name: str, **graph) -> Diagram:
+    # left to right: every pipeline reads as one horizontal flow
     return Diagram(title, filename=os.path.join(OUT, name), outformat="svg", show=False,
-                   direction=direction, graph_attr=GRAPH, node_attr=NODE, edge_attr=EDGE)
+                   direction="LR", graph_attr={**GRAPH, **graph}, node_attr=NODE, edge_attr=EDGE)
 
 
 def rasterise(name: str) -> None:
@@ -152,12 +163,13 @@ def data_training():
             minio = icon("minio", "MinIO\nDVC remote")
 
         engineer >> flow("1. clean") >> notebook >> flow("2. version") >> dvc
-        dvc >> flow("dvc repro") >> phobert >> flow("778 features") >> lgbm
-        lgbm >> flow("3. log run") >> mlflow
+        dvc >> flow("dvc repro") >> phobert >> flow("778 features") >> lgbm >> flow("3. log run") >> mlflow
         mlflow >> flow("5") >> sql
         mlflow >> flow("4, 6") >> gcs
-        dvc >> flow("dvc push", style="dashed") >> minio
-        audits >> flow("feedback -> retrain", style="dashed") >> dvc
+        lgbm >> place() >> audits
+        mlflow >> place() >> minio
+        dvc >> flow("dvc push", side=True, style="dashed") >> minio
+        audits >> flow("feedback -> retrain", side=True, style="dashed") >> dvc
 
 
 def serving():
@@ -174,12 +186,10 @@ def serving():
         with group("Storage", STORAGE):
             gcs = GCS("GCS\nmodel")
 
-        clients >> flow("14") >> nginx >> flow("15") >> api
-        api >> flow("text", outside=True) >> transformer
-        transformer >> flow("778 features") >> predictor
-        predictor >> flow("probabilities", style="dashed") >> transformer
-        transformer >> flow("verdict", style="dashed") >> api
-        gcs >> flow("12. mount") >> predictor
+        clients >> flow("14") >> nginx >> flow("15") >> api >> flow("text") >> transformer
+        transformer >> flow("778 features") >> predictor << flow("12. mount") << gcs
+        predictor >> flow("probabilities", side=True, style="dashed") >> transformer
+        transformer >> flow("verdict", side=True, style="dashed") >> api
         api >> db
 
 
@@ -197,13 +207,14 @@ def rag_evaluation():
         with group("Training", SERVICE):
             dvc = icon("dvc", "Retrain")
 
-        patient >> flow("question") >> rag >> flow("answer + contexts") >> guard
-        guard >> flow("pass / block", outside=True) >> patient
-        guard >> flow("regenerate", color="#b7791f") >> rag
-        guard >> db
-        db >> flow("deep audit", style="dashed") >> judge >> flow("verdicts", style="dashed") >> db
-        db >> trace >> flow("feedback") >> db
+        patient >> flow("question") >> rag >> flow("answer + contexts") >> guard >> flow("audit") >> db
+        db >> flow("deep audit", style="dashed") >> judge
+        db >> trace
         db >> flow("flywheel", style="dashed") >> dvc
+        guard >> flow("pass / block", side=True) >> patient
+        guard >> flow("regenerate", side=True, color="#b7791f") >> rag
+        judge >> flow("verdicts", side=True, style="dashed") >> db
+        trace >> flow("feedback", side=True) >> db
 
 
 def ci_cd():
@@ -221,18 +232,17 @@ def ci_cd():
             helm = Helm("Helm")
             gke = GKE("hallucination-prod")
 
-        engineer >> flow("7. push") >> github >> flow("8") >> ci
-        ci >> flow("9. image") >> registry
-        ci >> flow("main") >> cd
-        mlflow >> flow("model") >> cd
-        cd >> flow("11, 13", outside=True) >> helm >> gke
-        registry >> flow("10. pull", style="dashed") >> gke
+        engineer >> flow("7. push") >> github >> flow("8") >> ci >> flow("main") >> cd
+        cd >> flow("11, 13") >> helm >> gke
+        cd << flow("model") << mlflow
+        ci >> flow("9. image") >> registry >> flow("10. pull", style="dashed") >> gke
         github >> flow("web", style="dashed") >> vercel
 
 
 def provisioning():
     """Overview dashed paths (Terraform, Ansible) + Helm releases; minikube for local tests."""
-    with diagram("Infrastructure pipeline", "infrastructure-pipeline"):
+    # compound: one "creates" arrow can end on the GCP box instead of two long curves
+    with diagram("Infrastructure pipeline", "infrastructure-pipeline", compound="true"):
         engineer = User("AI engineer")
         terraform = Terraform("")  # the icon already reads "Terraform"
         ansible = Ansible("Ansible")
@@ -243,10 +253,12 @@ def provisioning():
         with group("Local Environment", LOCAL):
             minikube = K8S("minikube\n(local test)")
 
-        engineer >> flow("1. provision") >> terraform >> [gke, sql]
-        engineer >> flow("2. bootstrap") >> ansible >> flow("KServe, MLflow,\nmonitoring") >> gke
-        engineer >> flow("3. release") >> helm >> flow("backend,\nInferenceService") >> gke
+        engineer >> flow("1. provision") >> terraform >> flow("2. bootstrap") >> ansible
+        ansible >> flow("3. release") >> helm >> flow("backend,\nInferenceService") >> gke
+        helm >> place() >> sql
         helm >> flow("same chart", style="dashed") >> minikube
+        terraform >> flow("creates GKE + Cloud SQL", side=True, style="dashed", lhead="cluster_GCP") >> sql
+        ansible >> flow("KServe, MLflow, monitoring", side=True, style="dashed") >> gke
 
 
 def observability():
@@ -266,8 +278,11 @@ def observability():
         clients >> nginx >> api
         api >> flow("metrics") >> prom
         api >> flow("16. traces") >> jaeger
-        api >> flow("logs") >> loki
-        api >> flow("audits") >> drift
+        api >> flow("logs", side=True) >> loki
+        api >> flow("audits", side=True) >> drift
+        # 2 x 2 grid instead of one tall column: logs and drift sit one column to the right
+        prom >> place() >> loki
+        jaeger >> place() >> drift
         [prom, jaeger, loki, drift] >> grafana
 
 
