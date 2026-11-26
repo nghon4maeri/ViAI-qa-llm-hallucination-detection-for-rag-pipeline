@@ -73,6 +73,8 @@ docs/.svelte-kit-old
 machine-learning/build/
 client-sdk/python/build/
 
-# graphify knowledge graph (local tooling, rebuilt by `graphify update .`)
+# local AI tooling: graphify knowledge graph (rebuilt by `graphify update .`), Claude Code skills and instructions
 graphify-out/
 .graphifyignore
+.claude/
+CLAUDE.md
