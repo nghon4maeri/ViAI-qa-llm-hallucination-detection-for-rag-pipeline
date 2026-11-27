@@ -26,7 +26,7 @@ ViAI-QA checks the answers of Vietnamese RAG systems (medical domain) against th
 
 ## System Architecture
 
-<p align="center"><img src="docs/images/overview.png" alt="System" width="90%"></p>
+<p align="center"><img src="docs/images/overview.png" alt="System" width="110%"></p>
 
 
 | Pipeline | Overview steps | Section |
