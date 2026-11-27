@@ -232,8 +232,8 @@ k9s --context viai-qa    # browse nodes, pods, logs
 
 **Evidence**: `make deploy-local` on minikube, viewed in `k9s --context viai-qa`. All 25 pods run on the single `viai-qa` node: the platform (backend, KServe predictor, MLflow, Postgres, nginx gateway, Evidently) in `hallucination-prod`, and Prometheus, Grafana, Loki and Jaeger in `monitoring`.
 
-<p align="center"><img src="docs/images/k8s/k9s-pods.png" alt="k9s: all pods running" width="760"></p>
-<p align="center"><img src="docs/images/k8s/k9s-nodes.png" alt="k9s: viai-qa node ready" width="760"></p>
+<p align="center"><img src="docs/images/k8s/k9s-pods.png" alt="k9s: all pods running" width="1000"></p>
+<p align="center"><img src="docs/images/k8s/k9s-nodes.png" alt="k9s: viai-qa node ready" width="1000"></p>
 
 **Deploy KServe + Observability stack:**
 ```bash
