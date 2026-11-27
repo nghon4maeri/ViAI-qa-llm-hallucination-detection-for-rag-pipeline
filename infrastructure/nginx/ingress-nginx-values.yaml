@@ -1,0 +1,14 @@
+# infrastructure/nginx/ingress-nginx-values.yaml
+# ingress-nginx controller for the nginx-gateway release (helmfile). The API-key gateway config for
+# docker compose stays in nginx.conf / api_keys.conf next to this file.
+controller:
+  ingressClassResource:
+    name: nginx
+    default: true
+  service:
+    type: LoadBalancer          # GKE: external IP (README: <ip>.nip.io)
+  metrics:
+    enabled: true               # scraped by kube-prometheus-stack
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 512Mi}

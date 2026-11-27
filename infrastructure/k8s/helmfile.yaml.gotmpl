@@ -1,11 +1,16 @@
-# infrastructure/k8s/helmfile.yaml
-# Manages all Helm releases for the hallucination detection MLOps platform
-# Usage:
-#   helmfile sync                    — deploy everything
-#   helmfile sync -l tier=infra      — deploy infrastructure only
-#   helmfile sync -l tier=app        — deploy application only
-#   helmfile sync -l tier=observability — deploy observability only
-#   helmfile destroy                 — remove everything
+# infrastructure/k8s/helmfile.yaml.gotmpl
+# Manages all Helm releases for the hallucination detection MLOps platform (the k8s part of the
+# architecture). Two environments:
+#   prod   GKE (values/*-prod.yaml)
+#   local  minikube profile viai-qa: the same releases with values/<release>-local.yaml layered on top
+#          (smaller resources, images built locally, no cloud services)
+# Usage (from this directory):
+#   helmfile -e local sync                       — deploy everything on minikube
+#   helmfile -e prod  sync                       — deploy everything on GKE
+#   helmfile -e local sync -l tier=infra         — infrastructure only (also tier=app, tier=observability)
+#   helmfile -e local destroy                    — remove everything
+# KServe and cert-manager are cluster add-ons, installed first by Ansible (setup_*_stack.yaml) or
+# by local/deploy-minikube.sh.
 
 repositories:
   - name: prometheus-community
@@ -16,6 +21,8 @@ repositories:
     url: https://jaegertracing.github.io/helm-charts
   - name: jetstack
     url: https://charts.jetstack.io
+  - name: ingress-nginx
+    url: https://kubernetes.github.io/ingress-nginx
 
 environments:
   prod:
@@ -23,12 +30,17 @@ environments:
       - values/platform-prod.yaml
       - values/backend-prod.yaml
       - values/model-prod.yaml
+  local: {}
 
+---
+# helmfile v1: environments and releases live in separate YAML parts
 helmDefaults:
   wait: true
   timeout: 600
   atomic: true
   cleanupOnFail: true
+
+{{- $env := .Environment.Name }}
 
 releases:
   - name: namespaces
@@ -37,19 +49,36 @@ releases:
     labels:
       tier: infra
 
+  - name: postgres
+    namespace: hallucination-prod
+    chart: charts/postgres
+    labels:
+      tier: infra
+    missingFileHandler: Info
+    values:
+      - values/postgres-{{ $env }}.yaml
+    needs:
+      - default/namespaces
+
   - name: mlflow
     namespace: hallucination-prod
     chart: charts/mlflow
     labels:
       tier: infra
+    missingFileHandler: Info
+    values:
+      - values/mlflow-{{ $env }}.yaml
     needs:
-      - default/namespaces
+      - hallucination-prod/postgres
 
   - name: mlflow-runtime
     namespace: hallucination-prod
     chart: charts/mlflow-runtime
     labels:
       tier: infra
+    missingFileHandler: Info
+    values:
+      - values/mlflow-runtime-{{ $env }}.yaml
     needs:
       - hallucination-prod/mlflow
 
@@ -58,9 +87,12 @@ releases:
     chart: charts/hallucination-backend
     labels:
       tier: app
+    missingFileHandler: Info
     values:
       - values/backend-prod.yaml
+      - values/backend-{{ $env }}.yaml
     needs:
+      - hallucination-prod/postgres
       - hallucination-prod/mlflow
 
   - name: hallucination-model
@@ -68,18 +100,23 @@ releases:
     chart: charts/hallucination-model
     labels:
       tier: app
+    missingFileHandler: Info
     values:
       - values/model-prod.yaml
+      - values/model-{{ $env }}.yaml
     needs:
       - hallucination-prod/mlflow-runtime
 
   - name: nginx-gateway
     namespace: hallucination-prod
     chart: ingress-nginx/ingress-nginx
+    version: "4.11.3"
     labels:
       tier: infra
+    missingFileHandler: Info
     values:
-      - ../gateway/nginx/custom-values.yaml
+      - ../nginx/ingress-nginx-values.yaml
+      - values/nginx-gateway-{{ $env }}.yaml
     needs:
       - default/namespaces
 
@@ -90,8 +127,10 @@ releases:
     labels:
       tier: observability
       component: metrics
+    missingFileHandler: Info
     values:
       - ../observability/prometheus/values.yaml
+      - values/monitoring-stack-{{ $env }}.yaml
     needs:
       - default/namespaces
 
@@ -126,8 +165,10 @@ releases:
     labels:
       tier: observability
       component: dashboards
+    missingFileHandler: Info
     values:
       - ../observability/grafana/values.yaml
+      - values/grafana-{{ $env }}.yaml
     needs:
       - monitoring/monitoring-stack
       - monitoring/loki-stack
@@ -139,8 +180,10 @@ releases:
     labels:
       tier: observability
       component: drift
+    missingFileHandler: Info
     values:
       - ../observability/evidently/values.yaml
+      - values/evidently-drift-{{ $env }}.yaml
     needs:
       - monitoring/monitoring-stack
       - hallucination-prod/hallucination-backend

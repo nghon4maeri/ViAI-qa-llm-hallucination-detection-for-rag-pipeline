@@ -1,0 +1,8 @@
+# infrastructure/k8s/values/monitoring-stack-local.yaml — fits the 5 GB minikube profile
+prometheus:
+  prometheusSpec:
+    retention: 1d
+    retentionSize: "1GB"
+    resources:
+      requests: {cpu: 100m, memory: 256Mi}
+      limits: {memory: 768Mi}

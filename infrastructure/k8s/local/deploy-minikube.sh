@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deploy-test the hallucination-detector InferenceService on a local minikube profile.
 # GKE stays the production target; this uses the same chart, runtime and namespace with
-# infrastructure/k8s/values/model-minikube.yaml. Predictor only (see that file).
+# infrastructure/k8s/values/model-local.yaml. Predictor only (see that file).
 #
 #   infrastructure/k8s/local/deploy-minikube.sh          # from the repo root
 #   k9s --context viai-qa -n hallucination-prod           # browse it
@@ -54,7 +54,7 @@ $K -n $NS delete pod model-store-loader --wait
 
 echo "== InferenceService (hallucination-model chart)"
 $H upgrade --install hallucination-model infrastructure/k8s/charts/hallucination-model -n $NS \
-  -f infrastructure/k8s/values/model-minikube.yaml
+  -f infrastructure/k8s/values/model-local.yaml
 # same tag, new image: recreate the pod (KServe's controller reverts `rollout restart` on its Deployment)
 $K -n $NS delete pod -l serving.kserve.io/inferenceservice=hallucination-detector,component=predictor --ignore-not-found --wait=false
 $K -n $NS wait inferenceservice/hallucination-detector --for=condition=Ready --timeout=15m

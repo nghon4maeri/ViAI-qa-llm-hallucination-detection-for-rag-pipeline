@@ -1,0 +1,5 @@
+# infrastructure/k8s/values/evidently-drift-local.yaml — image built from observability/evidently/Dockerfile
+image:
+  repository: evidently-drift
+  tag: local
+  pullPolicy: IfNotPresent

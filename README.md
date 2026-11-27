@@ -228,7 +228,7 @@ infrastructure/k8s/local/deploy-minikube.sh     # profile viai-qa; kubectl's def
 k9s --context viai-qa -n hallucination-prod     # browse pods, InferenceService, logs
 kubectl --context viai-qa -n hallucination-prod port-forward svc/hallucination-detector-predictor 18085:80
 ```
-Same chart, runtime and namespace as GKE (`values/model-minikube.yaml`): KServe 0.16 in Standard mode, the predictor built from `infrastructure/docker/Dockerfile.predictor`, and the model on a PVC instead of S3/GCS. The transformer is off locally, because it needs torch and the NLI/NER weights.
+Same chart, runtime and namespace as GKE (`values/model-local.yaml`): KServe 0.16 in Standard mode, the predictor built from `infrastructure/docker/Dockerfile.predictor`, and the model on a PVC instead of S3/GCS. The transformer is off locally, because it needs torch and the NLI/NER weights.
 
 **Deploy KServe + Observability stack:**
 ```bash

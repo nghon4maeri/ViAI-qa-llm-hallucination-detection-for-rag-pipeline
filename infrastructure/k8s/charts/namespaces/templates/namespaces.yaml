@@ -1,0 +1,10 @@
+{{- range .Values.namespaces }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ . }}
+  annotations:
+    # uninstalling the release must not delete workloads and their data
+    helm.sh/resource-policy: keep
+{{- end }}

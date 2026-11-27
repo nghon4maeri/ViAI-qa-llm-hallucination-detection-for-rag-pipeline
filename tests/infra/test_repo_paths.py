@@ -70,10 +70,17 @@ def test_referenced_paths_exist(monkeypatch):
     # Relative paths in Ansible / Helmfile
     for f, d in [("infrastructure/iac/ansible/setup_k8s_stack.yaml", "infrastructure/iac/ansible"),
                  ("infrastructure/iac/ansible/setup_gke_stack.yaml", "infrastructure/iac/ansible"),
-                 ("infrastructure/k8s/helmfile.yaml", "infrastructure/k8s")]:
+                 ("infrastructure/k8s/helmfile.yaml.gotmpl", "infrastructure/k8s")]:
         for p in re.findall(r"(\.\./[\w./-]+)", open(f).read()):
-            if "gateway/nginx/custom-values" in p: continue  # broken before the refactor, see REFACTOR_PLAN
             need(os.path.normpath(os.path.join(d, p)), os.path.basename(f))
+
+    # Helmfile local charts and values files. Per-environment overrides ({{ $env }}) are optional
+    # by design (missingFileHandler), so only the fixed paths must exist.
+    hf = open("infrastructure/k8s/helmfile.yaml.gotmpl").read()
+    for p in re.findall(r"^\s*chart:\s*(charts/\S+)", hf, re.M):
+        need(os.path.join("infrastructure/k8s", p, "Chart.yaml"), "helmfile chart")
+    for p in re.findall(r"^\s*-\s*(values/[\w.-]+\.yaml)\s*$", hf, re.M):
+        need(os.path.join("infrastructure/k8s", p), "helmfile values")
 
     # CI, Jenkins, Render, Vercel, Makefile, DVC
     for f in [".github/workflows/ci.yml", "Jenkinsfile", "Makefile"]:
