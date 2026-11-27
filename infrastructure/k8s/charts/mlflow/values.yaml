@@ -1,0 +1,18 @@
+# infrastructure/k8s/charts/mlflow/values.yaml
+# The image's entrypoint builds the backend store URI from DB_* and picks the artifact root from
+# MLFLOW_GCS_BUCKET / MLFLOW_S3_BUCKET, falling back to /mlflow/artifacts (the PVC below).
+image:
+  repository: ghcr.io/nhnammldlnlpcvrs/mlflow
+  tag: "2.11.3"
+  pullPolicy: IfNotPresent
+db:
+  host: postgres                    # charts/postgres service
+  name: mlflow
+  credentialsSecret: postgres-credentials   # keys POSTGRES_USER / POSTGRES_PASSWORD
+env: {}                             # e.g. MLFLOW_GCS_BUCKET: vihallu-mlflow on GKE
+artifacts:
+  storage: 2Gi                      # used when no bucket is set
+workers: 2
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits: {cpu: 500m, memory: 1Gi}

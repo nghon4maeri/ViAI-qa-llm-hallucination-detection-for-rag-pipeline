@@ -1,0 +1,4 @@
+# infrastructure/k8s/charts/namespaces/values.yaml
+namespaces:
+  - hallucination-prod
+  - monitoring

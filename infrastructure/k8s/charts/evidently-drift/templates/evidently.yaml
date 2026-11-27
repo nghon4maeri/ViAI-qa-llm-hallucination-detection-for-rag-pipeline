@@ -1,0 +1,51 @@
+{{- if .Values.predictionsPvc.create }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.predictionsPvc.name }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ .Values.predictionsPvc.storage }}
+---
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: evidently-drift
+  annotations: {{- toYaml .Values.service.annotations | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector: {app: evidently-drift}
+  ports:
+    - {name: http, port: {{ .Values.service.port }}, targetPort: {{ .Values.service.targetPort }}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evidently-drift
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {app: evidently-drift}
+  template:
+    metadata:
+      labels: {app: evidently-drift}
+    spec:
+      containers:
+        - name: evidently-drift
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- range $k, $v := .Values.env }}
+            - {name: {{ $k }}, value: {{ $v | quote }}}
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          readinessProbe:
+            httpGet: {path: /health, port: {{ .Values.service.targetPort }}}
+            initialDelaySeconds: 10
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts: {{- toYaml .Values.volumeMounts | nindent 12 }}
+      volumes: {{- toYaml .Values.volumes | nindent 8 }}

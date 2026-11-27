@@ -1,0 +1,17 @@
+# infrastructure/k8s/values/backend-local.yaml — layered on backend-prod.yaml for helmfile -e local
+# Slim image without torch (infrastructure/docker/Dockerfile.backend-lite); the detector runs as the
+# mock engine, the real model is served by the KServe predictor (hallucination-model release).
+replicaCount: 1
+image:
+  repository: hallucination-backend-lite
+  tag: local
+  pullPolicy: IfNotPresent
+autoscaling:
+  enabled: false
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits: {cpu: 500m, memory: 768Mi}
+env:
+  ENVIRONMENT: local
+  DISABLE_MODEL: "true"
+  KSERVE_ENDPOINT: ""

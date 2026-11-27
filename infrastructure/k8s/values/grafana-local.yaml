@@ -1,0 +1,3 @@
+# infrastructure/k8s/values/grafana-local.yaml
+persistence:
+  enabled: false

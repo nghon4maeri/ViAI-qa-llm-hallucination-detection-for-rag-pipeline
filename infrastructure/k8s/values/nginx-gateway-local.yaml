@@ -1,0 +1,6 @@
+# infrastructure/k8s/values/nginx-gateway-local.yaml — no cloud load balancer on minikube
+controller:
+  service:
+    type: NodePort
+  admissionWebhooks:
+    enabled: false              # one image fewer to pull; not needed for a local test

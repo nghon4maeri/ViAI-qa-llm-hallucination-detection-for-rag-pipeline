@@ -1,0 +1,10 @@
+# infrastructure/k8s/charts/evidently-drift/values.yaml
+# Deployment values live in infrastructure/observability/evidently/values.yaml (helmfile passes it).
+replicaCount: 1
+image: {repository: evidently-drift-service, tag: latest, pullPolicy: IfNotPresent}
+service: {type: ClusterIP, port: 8001, targetPort: 8001, annotations: {}}
+env: {}
+resources: {}
+predictionsPvc: {create: true, name: predictions-pvc, storage: 1Gi}
+volumeMounts: []
+volumes: []

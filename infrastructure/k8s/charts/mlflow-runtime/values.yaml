@@ -1,0 +1,7 @@
+# infrastructure/k8s/charts/mlflow-runtime/values.yaml
+# Same runtime as infrastructure/k8s/runtimes/mlflow-cluster-runtime.yaml (kubectl/Ansible path).
+image: docker.io/seldonio/mlserver:1.7.1   # local: hallucination-predictor:local (Dockerfile.predictor)
+modelName: hallucination-detector
+resources:
+  requests: {cpu: 500m, memory: 1Gi}
+  limits: {cpu: "1", memory: 2Gi}

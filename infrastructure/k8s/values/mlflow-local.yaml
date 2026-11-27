@@ -1,0 +1,5 @@
+# infrastructure/k8s/values/mlflow-local.yaml — image built from infrastructure/mlflow/Dockerfile
+image:
+  repository: mlflow
+  tag: local
+workers: 1

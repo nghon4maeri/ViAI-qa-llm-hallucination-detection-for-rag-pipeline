@@ -1,0 +1,13 @@
+# infrastructure/k8s/charts/postgres/values.yaml
+# In-cluster PostgreSQL; the service name matches DATABASE_URL in values/backend-prod.yaml.
+# On GKE, MLflow may use Cloud SQL instead (infrastructure/iac/terraform/gke/cloud_sql.tf).
+image: postgres:17
+user: user
+password: password          # override with --set / a secret outside local clusters
+databases:                  # created on first start
+  - viai_qa
+  - mlflow
+storage: 2Gi
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits: {cpu: 500m, memory: 512Mi}

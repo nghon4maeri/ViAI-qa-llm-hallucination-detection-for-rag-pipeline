@@ -1,0 +1,5 @@
+apiVersion: v2
+name: namespaces
+description: Namespaces of the ViAI-QA platform (first helmfile release; everything else needs it)
+type: application
+version: 0.1.0

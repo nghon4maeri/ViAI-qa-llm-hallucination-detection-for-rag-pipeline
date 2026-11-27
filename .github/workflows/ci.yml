@@ -16,7 +16,9 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/hallucination-backend
+  # a package GITHUB_TOKEN creates is linked to this repo; ghcr.io/<owner>/hallucination-backend already
+  # exists from the old repo (pushed with a PAT), so the workflow token is denied there
+  IMAGE_NAME: ${{ github.repository_owner }}/viai-qa-backend
   # the version the CI-only environment (requirements/ci.txt) is verified on
   PYTHON_VERSION: "3.12"
 

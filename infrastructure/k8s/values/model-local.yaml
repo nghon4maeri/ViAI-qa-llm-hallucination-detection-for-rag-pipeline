@@ -1,4 +1,4 @@
-# infrastructure/k8s/values/model-minikube.yaml
+# infrastructure/k8s/values/model-local.yaml
 # Local deploy test of the hallucination-model chart (infrastructure/k8s/local/deploy-minikube.sh).
 # Same chart and runtime as prod; only what a laptop cluster cannot provide changes:
 #   - predictor only: the transformer image needs torch + NLI/NER weights (several GB)
