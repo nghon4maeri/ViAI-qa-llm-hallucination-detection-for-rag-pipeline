@@ -1,0 +1,13 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "viai-text"
+version = "0.1.0"
+description = "Rust hot loops for ViAI-QA (char n-gram TF-IDF retrieval), docs/GO_RUST_MIGRATION_PLAN.md R1"
+requires-python = ">=3.10"
+
+[tool.maturin]
+features = ["python", "pyo3/extension-module"]
+module-name = "viai_text"

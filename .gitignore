@@ -83,3 +83,6 @@ CLAUDE.md
 machine-learning/notebooks/eda-vihallu.ipynb
 machine-learning/notebooks/train-model-vihallu.ipynb
 .ipynb_checkpoints/
+
+# Rust build output (machine-learning/viai_text)
+machine-learning/viai_text/target/

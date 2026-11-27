@@ -36,6 +36,8 @@ Measured on ViMedAQA test (400 questions, 2,125 passages, 2026-11-26):
 | pgvector + LSA 512 | 0.49 | 0.67 | 0.74 |
 | pgvector + mean-pooled PhoBERT | 0.19 | 0.31 | 0.36 |
 
+The index has a Rust implementation (`pip install ./machine-learning/viai_text`) that gives the same scores as scikit-learn: building the 17,835-passage index takes 0.65 s instead of 4.4 s, and a query 0.8 ms instead of 64 ms. Without it, scikit-learn is used.
+
 Raw PhoBERT embeddings are not trained for retrieval. A Vietnamese bi-encoder (e.g. `bkai-foundation-models/vietnamese-bi-encoder`) could not be downloaded on the current network. `Retriever` is a protocol, so a `PgVectorRetriever` can replace `TfidfRetriever` by adding an `embedding vector(768)` column to `rag_passages`.
 
 Tests: `tests/demo/test_rag_demo.py`. Claude is faked with a scripted client; the guard runs against the real API.

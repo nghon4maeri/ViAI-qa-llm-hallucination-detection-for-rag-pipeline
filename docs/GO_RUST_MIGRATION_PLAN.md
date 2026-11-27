@@ -1,7 +1,7 @@
 # Go & Rust migration plan
 
 **Status (2026-11-27):**
-- **G0, G1 done:** `infrastructure/k8s/deployctl`, dry-run verified against minikube. The real `all` run waits on image pulls.
+- **G0, G1, R1 done:** `infrastructure/k8s/deployctl`, dry-run verified against minikube. The real `all` run waits on image pulls.
 - **R0 done:** `machine-learning/benchmarks/bench_cpu_paths.py`.
 - Everything else is still a plan.
 
@@ -135,7 +135,7 @@ The rule is to convert only paths where Python itself is the bottleneck, behind 
 | Phase | Work | Done when |
 |---|---|---|
 | **R0** ✅ | `machine-learning/benchmarks/bench_cpu_paths.py` (`make bench`): the §1 timings, with real data or `--synthetic` (same mean lengths) for CI, and `--json` output | Reproduced locally. Real data: TF-IDF build 4.48 s, query 59 ms, feature matrix 445 ms, `simple_features` 72 ms, `split_claims` 25 ms. The first draft of this plan said 6.8 s for the build; that figure was taken under `cProfile`. |
-| **R1** | `viai_text` crate + TF-IDF retriever; parity tests; wheel in CI | Parity green; build ≥ 5× faster, query ≥ 10× faster on the benchmark |
+| **R1** ✅ | `machine-learning/viai_text` (Rust, PyO3 0.30 + maturin, abi3 wheel). `TfidfRetriever` uses it when installed (`RAG_RETRIEVER=python` keeps scikit-learn). Parity and speed on ViMedAQA, 17,835 passages × 400 test questions: same 93,546 features, max score difference 1.3e-8, same top-3 400/400, same recall@3; build 4.40 s → 0.65 s (6.7×), query 64 ms → 0.77 ms (83×). Tests: 4 `cargo test`, 9 Python parity tests (skipped without the extension); CI builds it. | Parity green; build ≥ 5× faster, query ≥ 10× faster ✅ |
 | **R2** | Batch features in the crate, only if R0 shows batches large enough to matter | Identical outputs; measured gain |
 
 ### Risks

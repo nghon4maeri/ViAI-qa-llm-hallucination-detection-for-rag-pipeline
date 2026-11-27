@@ -44,6 +44,11 @@ jobs:
       - name: Install CI dependencies
         run: pip install -r requirements/ci.txt
 
+      # Rust TF-IDF index (docs/GO_RUST_MIGRATION_PLAN.md R1); the runner image ships cargo, and the
+      # parity tests in tests/demo compare it with scikit-learn
+      - name: Build the Rust extension (viai_text)
+        run: pip install ./machine-learning/viai_text
+
       # No model weights in CI: DISABLE_MODEL uses the mock engine; ML-stack tests skip themselves
       - name: Run unit & integration tests with coverage
         env:

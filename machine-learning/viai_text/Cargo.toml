@@ -1,0 +1,23 @@
+[package]
+name = "viai_text"
+version = "0.1.0"
+edition = "2021"
+description = "Rust hot loops for ViAI-QA: character n-gram TF-IDF retrieval, identical to scikit-learn's char_wb TfidfVectorizer"
+license = "MIT"
+publish = false
+
+[lib]
+name = "viai_text"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+# maturin builds with python + pyo3/extension-module; `cargo test` runs the pure Rust core without them
+python = ["dep:pyo3"]
+
+[dependencies]
+pyo3 = { version = "0.30", optional = true, features = ["abi3-py310"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
