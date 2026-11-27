@@ -1,4 +1,4 @@
-.PHONY: install test test-all test-ml run migrate pipeline up down frontend graph diagrams
+.PHONY: install test test-all test-ml run migrate pipeline up down frontend graph diagrams bench
 
 PY ?= python
 
@@ -37,3 +37,6 @@ graph:            ## Refresh the graphify knowledge graph after code changes
 
 diagrams:         ## Redraw the README pipeline diagrams (needs Graphviz `dot`)
 	python docs/diagrams/architecture.py
+
+bench:            ## CPU timings of the Rust candidates (docs/GO_RUST_MIGRATION_PLAN.md, R0)
+	python machine-learning/benchmarks/bench_cpu_paths.py

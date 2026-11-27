@@ -1,6 +1,9 @@
 # Go & Rust migration plan
 
-**Status:** analysis and plan, nothing migrated yet (2026-11-27). A first draft of `infrastructure/k8s/deployctl/` (`go.mod`, `runner.go`) exists and is not committed.
+**Status (2026-11-27):**
+- **G0 done:** `infrastructure/k8s/deployctl`, dry-run verified against minikube. The real `all` run waits on image pulls.
+- **R0 done:** `machine-learning/benchmarks/bench_cpu_paths.py`.
+- Everything else is still a plan.
 
 **Goal:**
 - **Go** for the code that drives Kubernetes and the clusters.
@@ -46,8 +49,8 @@ The glue is spread over four languages: bash, Groovy+sh, Ansible YAML+sh, and Py
 | Tokenisation | per call | small | HF `tokenizers`, already Rust |
 | `build_feature_matrix` (vihallu_features) | 7,000 × 778 | 458 ms | sklearn cosine (BLAS); `simple_features` 99 ms |
 | `split_claims` (rag.py) | 7,000 answers | 31 ms | regex in C |
-| **TF-IDF index build** (`rag_demo/retriever.py`) | 17,835 passages | **6.8 s** | **Python char n-gram loops** (21 M `list.append` calls) |
-| **TF-IDF query** | 1 question | **63 ms** | Python `transform` + sparse matmul |
+| **TF-IDF index build** (`rag_demo/retriever.py`) | 17,835 passages | **4.5 s** | **Python char n-gram loops** (21 M `list.append` calls) |
+| **TF-IDF query** | 1 question | **59 ms** | Python `transform` + sparse matmul |
 | `build_medical_hallu.py` perturbations | ViMedAQA, one DVC run | seconds | Python regex, runs once per data change |
 | Drift (`drift_service.py`) | periodic | — | pandas / Evidently |
 
@@ -91,7 +94,7 @@ The real per-request cost is the RAG evaluator's claim × chunk loop. Each pair 
 
 | Phase | Work | Done when |
 |---|---|---|
-| **G0** | `deployctl` with `up`, `addons`, `images`, `preload`, `adopt`, `sync`, `status`; Go unit tests (command plans, image extraction from `helmfile template`, context guard) | `deployctl all` on a fresh minikube profile brings all 12 helmfile releases up, matching what `deploy-minikube.sh` plus `helmfile -e local sync` produce |
+| **G0** ✅ | `deployctl` with `up`, `addons`, `images`, `preload`, `secrets`, `model`, `adopt`, `sync`, `status`, `all`. Go unit tests cover command plans, image extraction from `helmfile template`, the context guard and adoption (6 tests, 62% coverage). A `--dry-run all` against minikube found the 6 images still missing and skipped the existing secrets and adopted objects. | `deployctl all` on a fresh minikube profile brings all 12 helmfile releases up, matching what `deploy-minikube.sh` plus `helmfile -e local sync` produce |
 | **G1** | Remove `deploy-minikube.sh`; README, REFACTOR_PLAN and Makefile point at `deployctl`; CI job `deployctl` (`go vet`, `go test`) | CI green; `test_repo_paths` checks the Go module path |
 | **G2** | `deployctl wait …`, used from the Ansible shell tasks | Ansible `--check` on minikube unchanged; real run passes |
 | **G3** | Jenkins deploy and smoke-test stages call `deployctl`; `deployctl model-uri` replaces `resolve_storage_uri.py` | Jenkins dry run (`--dry-run`) prints the same kubectl/helm calls as today |
@@ -111,7 +114,7 @@ The rule is to convert only paths where Python itself is the bottleneck, behind 
 
 | # | Path | Today | Rust target | Expected | Keep the architecture by |
 |---|---|---|---|---|---|
-| **R1** | `TfidfRetriever` char n-gram TF-IDF (rag-demo) | build 6.8 s / 17.8 k passages, query 63 ms | crate `viai_text` (PyO3 + maturin): char_wb 2–4-gram hashing, sublinear tf, L2 norm, inverted index, top-k | build < 1 s, query < 5 ms (n-gram loops and sparse scoring in Rust) | Same `Retriever` protocol, same class name and arguments; `RAG_RETRIEVER=python` keeps sklearn |
+| **R1** | `TfidfRetriever` char n-gram TF-IDF (rag-demo) | build 4.5 s / 17.8 k passages, query 59 ms | crate `viai_text` (PyO3 + maturin): char_wb 2–4-gram hashing, sublinear tf, L2 norm, inverted index, top-k | build < 1 s, query < 5 ms (n-gram loops and sparse scoring in Rust) | Same `Retriever` protocol, same class name and arguments; `RAG_RETRIEVER=python` keeps sklearn |
 | **R2** | Batch text features for large JSONL batches: `normalize`, `simple_features`, `split_claims` | 99 ms + 31 ms per 7 k rows | Same crate: `simple_features_batch`, `split_claims_batch` | Matters only for batches far above today's size | `vihallu_features` keeps the same functions; it calls Rust when it is installed |
 | **R3** | `build_medical_hallu.py` perturbations | seconds, once per data change | — | **Not worth it** | — |
 | **R4** | PhoBERT / NLI / NER inference in Rust (`ort` / `candle`) | 165 s / 2.5 k texts (PyTorch) | — | **Not recommended now.** PyTorch is already native, and the 778-feature layout must match training bit for bit (the parity test). | Revisit only with ONNX export and re-validated parity |
@@ -131,7 +134,7 @@ The rule is to convert only paths where Python itself is the bottleneck, behind 
 
 | Phase | Work | Done when |
 |---|---|---|
-| **R0** | Benchmark harness (`machine-learning/benchmarks/`): the timings in §1 as a script, so every claim here is reproducible | Numbers reproduced on CI hardware |
+| **R0** ✅ | `machine-learning/benchmarks/bench_cpu_paths.py` (`make bench`): the §1 timings, with real data or `--synthetic` (same mean lengths) for CI, and `--json` output | Reproduced locally. Real data: TF-IDF build 4.48 s, query 59 ms, feature matrix 445 ms, `simple_features` 72 ms, `split_claims` 25 ms. The first draft of this plan said 6.8 s for the build; that figure was taken under `cProfile`. |
 | **R1** | `viai_text` crate + TF-IDF retriever; parity tests; wheel in CI | Parity green; build ≥ 5× faster, query ≥ 10× faster on the benchmark |
 | **R2** | Batch features in the crate, only if R0 shows batches large enough to matter | Identical outputs; measured gain |
 
