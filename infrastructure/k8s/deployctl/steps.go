@@ -69,7 +69,7 @@ func (d Deployer) Images(ctx context.Context) error {
 		return nil
 	}
 	for _, img := range localImages {
-		if err := d.run.Run(ctx, "docker", "build", "-q", "-t", img.Tag, "-f", filepath.Join(d.cfg.Root, img.Dockerfile),
+		if err := d.run.Run(ctx, "docker", "build", "-t", img.Tag, "-f", filepath.Join(d.cfg.Root, img.Dockerfile),
 			filepath.Join(d.cfg.Root, img.Context)); err != nil {
 			return err
 		}

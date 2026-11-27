@@ -10,7 +10,7 @@
 #   helmfile -e local sync -l tier=infra         — infrastructure only (also tier=app, tier=observability)
 #   helmfile -e local destroy                    — remove everything
 # KServe and cert-manager are cluster add-ons, installed first by Ansible (setup_*_stack.yaml) or
-# by local/deploy-minikube.sh.
+# by `deployctl addons` (infrastructure/k8s/deployctl).
 
 repositories:
   - name: prometheus-community

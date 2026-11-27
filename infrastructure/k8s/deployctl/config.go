@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// Pinned versions: the same ones local/deploy-minikube.sh installed and the docs describe.
+// Pinned versions of the cluster add-ons (README, docs/REFACTOR_PLAN.md R4).
 const (
 	certManagerVersion = "v1.16.2"
 	kserveVersion      = "v0.16.0"

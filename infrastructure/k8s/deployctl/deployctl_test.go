@@ -139,7 +139,7 @@ func TestAllRunsStepsInOrderWithExplicitContext(t *testing.T) {
 	}
 	joined := strings.Join(rec.calls, "\n")
 	// order: addons -> images -> preload -> secrets -> model -> sync -> status
-	order := []string{"helm --kube-context viai-qa upgrade --install cert-manager", "docker build -q -t hallucination-predictor:local",
+	order := []string{"helm --kube-context viai-qa upgrade --install cert-manager", "docker build -t hallucination-predictor:local",
 		"minikube -p viai-qa ssh -- docker pull -q quay.io/prometheus/prometheus:v2.48.1", "create secret generic mlflow-secret",
 		"export_serving_model.py", "helmfile --file /repo/infrastructure/k8s/helmfile.yaml.gotmpl -e local --kube-context viai-qa sync",
 		"kubectl --context viai-qa get nodes"}

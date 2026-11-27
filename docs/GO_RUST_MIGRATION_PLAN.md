@@ -1,7 +1,7 @@
 # Go & Rust migration plan
 
 **Status (2026-11-27):**
-- **G0 done:** `infrastructure/k8s/deployctl`, dry-run verified against minikube. The real `all` run waits on image pulls.
+- **G0, G1 done:** `infrastructure/k8s/deployctl`, dry-run verified against minikube. The real `all` run waits on image pulls.
 - **R0 done:** `machine-learning/benchmarks/bench_cpu_paths.py`.
 - Everything else is still a plan.
 
@@ -95,7 +95,7 @@ The real per-request cost is the RAG evaluator's claim × chunk loop. Each pair 
 | Phase | Work | Done when |
 |---|---|---|
 | **G0** ✅ | `deployctl` with `up`, `addons`, `images`, `preload`, `secrets`, `model`, `adopt`, `sync`, `status`, `all`. Go unit tests cover command plans, image extraction from `helmfile template`, the context guard and adoption (6 tests, 62% coverage). A `--dry-run all` against minikube found the 6 images still missing and skipped the existing secrets and adopted objects. | `deployctl all` on a fresh minikube profile brings all 12 helmfile releases up, matching what `deploy-minikube.sh` plus `helmfile -e local sync` produce |
-| **G1** | Remove `deploy-minikube.sh`; README, REFACTOR_PLAN and Makefile point at `deployctl`; CI job `deployctl` (`go vet`, `go test`) | CI green; `test_repo_paths` checks the Go module path |
+| **G1** ✅ | `deploy-minikube.sh` removed. README, Makefile (`make deploy-local`, `make deploy-status`), the helmfile, Terraform and values comments point at `deployctl`. CI job `deployctl` (gofmt, vet, test, build) gates the image build. The first real `deployctl all` run also changed `images`: `docker build -q` hid the build log of a failing image, so the log is now streamed. | CI green; the old script has no remaining references except the history note in REFACTOR_PLAN |
 | **G2** | `deployctl wait …`, used from the Ansible shell tasks | Ansible `--check` on minikube unchanged; real run passes |
 | **G3** | Jenkins deploy and smoke-test stages call `deployctl`; `deployctl model-uri` replaces `resolve_storage_uri.py` | Jenkins dry run (`--dry-run`) prints the same kubectl/helm calls as today |
 
