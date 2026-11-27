@@ -34,14 +34,15 @@ class ExistingPipelineAdapter(EvaluationEngine):
             pipeline._load_models()
 
     def evaluate(self, payload: EvaluationInput) -> EvaluationResult:
-        pipeline = self._get_pipeline()
-        
-        raw_result = pipeline.predict(
-            context=payload.context,
-            prompt=payload.prompt,
-            response=payload.response
-        )
+        return self.evaluate_batch([payload])[0]
 
+    def evaluate_batch(self, payloads: List[EvaluationInput]) -> List[EvaluationResult]:
+        pipeline = self._get_pipeline()
+        raw_results = pipeline.predict_batch([(p.context, p.prompt, p.response) for p in payloads])
+        return [self._to_result(raw) for raw in raw_results]
+
+    @staticmethod
+    def _to_result(raw_result: dict) -> EvaluationResult:
         # Map metrics if available; if not present (e.g. model disabled), they remain None
         breakdown = EvaluationBreakdown(
             p_entailment=raw_result.get("p_entailment"),

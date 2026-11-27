@@ -148,6 +148,29 @@ The rule is to convert only paths where Python itself is the bottleneck, behind 
 
 Per request, the RAG evaluator calls the detector once per claim × chunk pair, and each call runs four transformer models. Grouping the pairs and running each model once per batch, with padding to the longest pair, cuts the per-answer cost far more than any rewrite. It is a Python change behind the same `EvaluationEngine` interface. KServe already accepts batched V2 requests, so it touches neither the architecture nor the Go/Rust plan. It is recommended as a separate item after R0 measures it.
 
+**Status: done (in-process engine).** `evaluate_rag` sends the whole claim × chunk grid, answer and reference claims together, to the engine in one `evaluate_batch` call (`BatchEvaluationEngine`). `HallucinationPipeline.predict_batch` then runs each model once per batch of `EVAL_BATCH_SIZE` (default 8) triples, grouped by length:
+
+- **PhoBERT and NLI**: padded batches.
+- **LLM**: left-padded, with position ids that skip the padding, and logits for the last position only (`logits_to_keep=1`). Before, every call materialised the full sequence × 151 k vocabulary tensor, about 600 MB.
+- **NER**: runs once per distinct text. A 30 × 20 grid needs 50 NER calls instead of 1,200, because each chunk used to be re-tagged for every claim.
+- **LightGBM**: one call for all rows.
+
+`predict` and `extract_signals` are a batch of one, so the KServe transformer and the API share the same path.
+
+Measured on this machine (24-core CPU) with the real PhoBERT, on 120 triples:
+
+| Batch size | Time per triple | Max embedding difference vs batch 1 |
+|---|---|---|
+| 1 | 65 ms | — |
+| 8 | 47 ms (1.37×) | 7.6e-6 |
+| 16 | 48 ms | 1.6e-5 |
+
+The DeBERTa NLI and Qwen weights (about 5 GB) are not on this machine, so their speed-up is not measured. On CPU, torch already uses every core for a single sequence, so gains of this order are what to expect; the larger wins are on GPU, where batches fill the device.
+
+`tests/ml/test_batch_parity.py` checks batch against one triple at a time. It uses tiny random models of the real classes (BERT, Qwen2), and fails if the LLM batch is right-padded.
+
+The `KServeEngine` still sends one request per triple; sending a batched V2 request is the remaining step.
+
 ---
 
 ## 5. Order and effort (estimate)

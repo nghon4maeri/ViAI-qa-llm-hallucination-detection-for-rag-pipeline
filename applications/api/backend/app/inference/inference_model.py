@@ -1,6 +1,7 @@
 import os
+import time
 import numpy as np
-from typing import TYPE_CHECKING, Dict, Any, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Sequence, Union
 
 import vihallu_features as vf
 
@@ -23,6 +24,20 @@ FEATURE_SCHEMA_PATH = os.path.join(settings.MODELS_DIR, "feature_schema.json")
 NLI_MODEL_NAME = settings.NLI_MODEL_NAME
 NER_MODEL_NAME = settings.NER_MODEL_NAME
 VISTRAL_MODEL_NAME = settings.LLM_FEATURE_MODEL
+
+
+def _batched(items: Sequence, size: int, run: Callable[[list], np.ndarray], key: Callable = len) -> np.ndarray:
+    """
+    run() over chunks of at most `size` items and stack the rows back in input order. Items are grouped
+    by `key` (text length) first, so each padded batch holds texts of similar length.
+    """
+    order = sorted(range(len(items)), key=lambda i: key(items[i]))
+    rows: List[Any] = [None] * len(items)
+    for start in range(0, len(order), size):
+        idx = order[start:start + size]
+        for i, row in zip(idx, run([items[i] for i in idx])):
+            rows[i] = row
+    return np.stack(rows)
 
 
 class HallucinationPipeline:
@@ -53,6 +68,7 @@ class HallucinationPipeline:
         self.embed_centroid = None
         self.feature_dim = None
         self.device_cpu = None
+        self.batch_size = max(1, settings.EVAL_BATCH_SIZE)
         self.torch_module = None
 
     def _load_models(self):
@@ -130,9 +146,9 @@ class HallucinationPipeline:
         with open(FEATURE_SCHEMA_PATH) as f:
             self.feature_dim = json.load(f)["feature_dim"]
 
-    def _build_model_features(self, f_embed, context, prompt, response, vistral_no_ext_int):
+    def _build_model_features(self, f_embed, contexts, prompts, responses, vistral_no_ext_int):
         """Same builder as training (vihallu_features); vistral_no_ext_int follows vf.LLM_PROB_COLUMNS."""
-        x = vf.build_feature_matrix(f_embed, [context], [prompt], [response], vistral_no_ext_int, self.embed_centroid)
+        x = vf.build_feature_matrix(f_embed, contexts, prompts, responses, vistral_no_ext_int, self.embed_centroid)
         # The artifact on disk must have been trained on this layout
         if x.shape[1] != self.feature_dim:
             raise ValueError(f"Feature dim mismatch: got {x.shape[1]}, expected {self.feature_dim}")
@@ -143,60 +159,69 @@ class HallucinationPipeline:
         return np.mean([m.predict(x) for m in self.lgbm_models], axis=0)
 
     def _extract_embeddings(self, text_list):
-        import torch 
-        
-        inputs = self.embed_tokenizer(text_list, padding=True, truncation=True, max_length=vf.MAX_LENGTH, return_tensors="pt").to(self.device_cpu)
-        with torch.no_grad():
-            outputs = self.embed_model(**inputs)
-            embeddings = vf.masked_mean(outputs.last_hidden_state, inputs["attention_mask"]).cpu().numpy()
-        return embeddings
-
-    def _get_entity_set(self, text):
-        if not text: return set()
-        try:
-            entities = self.ner_pipeline(text)
-            return {e['word'].replace(" ", "").lower() for e in entities}
-        except: return set()
-
-    def _get_ner_features(self, context, response):
-        c_ents = self._get_entity_set(context)
-        r_ents = self._get_entity_set(response)
-        new_entity_count = len(r_ents - c_ents)
-        union = len(c_ents.union(r_ents))
-        overlap_ratio = len(c_ents.intersection(r_ents)) / union if union > 0 else 0.0
-        return np.array([[new_entity_count, overlap_ratio]])
-
-    def _get_nli_features(self, context, response):
+        """(N, 768) PhoBERT masked-mean embeddings, in batches of similar length."""
         import torch
 
-        premise = context if context else "no context"
-        hypothesis = response if response else "no response"
+        def run(chunk):
+            inputs = self.embed_tokenizer(chunk, padding=True, truncation=True, max_length=vf.MAX_LENGTH, return_tensors="pt").to(self.device_cpu)
+            with torch.no_grad():
+                outputs = self.embed_model(**inputs)
+                return vf.masked_mean(outputs.last_hidden_state, inputs["attention_mask"]).cpu().numpy()
 
-        inputs = self.nli_tokenizer(
-            premise,
-            hypothesis,
-            padding=True,
-            truncation=True,
-            max_length=512,
-            return_tensors="pt"
-        ).to(self.device_cpu)
+        return _batched(list(text_list), self.batch_size, run, key=len)
 
-        with torch.no_grad():
-            outputs = self.nli_model(**inputs)
-            probs = torch.softmax(outputs.logits, dim=-1).cpu().numpy()[0]
+    def _entity_sets(self, texts):
+        """Entity set per text. Each distinct text goes through NER once: a RAG chunk recurs for every claim."""
+        unique = list(dict.fromkeys(t for t in texts if t))
+        sets = {}
+        if unique:
+            try:
+                found = self.ner_pipeline(unique, batch_size=self.batch_size)
+            except Exception:
+                found = []
+                for t in unique:  # one bad text must not drop the others (the old per-text behaviour)
+                    try:
+                        found.append(self.ner_pipeline(t))
+                    except Exception:
+                        found.append([])
+            for t, entities in zip(unique, found):
+                sets[t] = {e['word'].replace(" ", "").lower() for e in entities}
+        return [sets.get(t, set()) for t in texts]
+
+    def _ner_features(self, contexts, responses):
+        """(N, 2): new entities in the response, entity overlap ratio."""
+        ents = self._entity_sets(list(contexts) + list(responses))
+        rows = []
+        for c_ents, r_ents in zip(ents[:len(contexts)], ents[len(contexts):]):
+            union = len(c_ents | r_ents)
+            rows.append([len(r_ents - c_ents), len(c_ents & r_ents) / union if union > 0 else 0.0])
+        return np.array(rows, dtype=float).reshape(-1, 2)
+
+    def _nli_probs(self, pairs):
+        """(N, 3) NLI probabilities [entailment, neutral, contradiction] for (premise, hypothesis) pairs."""
+        import torch
 
         id2label = self.nli_model.config.id2label
+        cols = [[i for i, v in id2label.items() if key in v.lower()][0] for key in ("entail", "neutral", "contradict")]
 
-        p_entail = probs[[i for i, v in id2label.items() if "entail" in v.lower()][0]]
-        p_neutral = probs[[i for i, v in id2label.items() if "neutral" in v.lower()][0]]
-        p_contra = probs[[i for i, v in id2label.items() if "contradict" in v.lower()][0]]
+        def run(chunk):
+            premises = [c if c else "no context" for c, _ in chunk]
+            hypotheses = [r if r else "no response" for _, r in chunk]
+            inputs = self.nli_tokenizer(
+                premises,
+                hypotheses,
+                padding=True,
+                truncation=True,
+                max_length=512,
+                return_tensors="pt"
+            ).to(self.device_cpu)
+            with torch.no_grad():
+                probs = torch.softmax(self.nli_model(**inputs).logits, dim=-1).cpu().numpy()
+            return probs[:, cols]
 
-        return p_entail, p_neutral, p_contra
+        return _batched(list(pairs), self.batch_size, run, key=lambda pair: len(pair[0]) + len(pair[1]))
 
-    def _get_vistral_probs(self, context, prompt, response):
-        import torch
-        import torch.nn.functional as F
-
+    def _vistral_text(self, context, prompt, response):
         sys_msg = """Bạn là chuyên gia thẩm định độ trung thực của AI (Hallucination Judge).
         Nhiệm vụ: Dựa vào 'Context', hãy phân loại 'Response' vào đúng 1 trong 3 nhãn: 0, 1, hoặc 2.
         
@@ -234,30 +259,47 @@ class HallucinationPipeline:
             {"role": "system", "content": sys_msg},
             {"role": "user", "content": user_msg}
         ]
-        
-        input_text = self.vistral_tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        inputs = self.vistral_tokenizer(input_text, return_tensors="pt").to(self.vistral_model.device)
+        return self.vistral_tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
-        with torch.no_grad():
-            outputs = self.vistral_model(**inputs)
-            next_token_logits = outputs.logits[0, -1, :]
-            
-            def get_id(token_str):
-                ids = self.vistral_tokenizer.encode(token_str, add_special_tokens=False)
-                return ids[-1] if ids else -1
+    def _vistral_probs(self, items):
+        """
+        (N, 3) LLM label probabilities [ext, int, no] for (context, prompt, response) triples: the softmax
+        over the next-token logits of "0", "1", "2". Batches are left-padded so the last position is
+        every row's next token; position ids skip the padding, so each row scores as it would alone.
+        """
+        import torch
+        import torch.nn.functional as F
 
-            id_0 = get_id("0")
-            id_1 = get_id("1")
-            id_2 = get_id("2")
+        tok = self.vistral_tokenizer
+        if tok.pad_token is None:
+            tok.pad_token = tok.eos_token
 
-            score_0 = next_token_logits[id_0].item()
-            score_1 = next_token_logits[id_1].item()
-            score_2 = next_token_logits[id_2].item()
-            
-            probs = F.softmax(torch.tensor([score_0, score_1, score_2]), dim=0).numpy()
-            
-            return np.array([[probs[0], probs[2], probs[1]]])
-        
+        def get_id(token_str):
+            ids = tok.encode(token_str, add_special_tokens=False)
+            return ids[-1] if ids else -1
+
+        label_ids = [get_id("0"), get_id("1"), get_id("2")]
+
+        def run(chunk):
+            side, tok.padding_side = tok.padding_side, "left"
+            try:
+                inputs = tok(chunk, return_tensors="pt", padding=True).to(self.vistral_model.device)
+            finally:
+                tok.padding_side = side
+            position_ids = (inputs["attention_mask"].cumsum(-1) - 1).clamp(min=0)
+            with torch.no_grad():
+                # logits for the last position only: the full (batch, length, vocab) tensor is GBs
+                logits = self.vistral_model(**inputs, position_ids=position_ids, logits_to_keep=1).logits[:, -1, :]
+            probs = F.softmax(logits[:, label_ids].float(), dim=-1).cpu().numpy()  # [p0, p1, p2]
+            return probs[:, [0, 2, 1]]
+
+        texts = [self._vistral_text(c, p, r) for c, p, r in items]
+        return _batched(texts, self.batch_size, run, key=len)
+
+    def _get_vistral_probs(self, context, prompt, response):
+        """(1, 3) [ext, int, no] for one sample (machine-learning/pipelines/evaluate_detector.py)."""
+        return self._vistral_probs([(context, prompt, response)])
+
     def _normalize_label(self, label: str) -> str:
         label = label.lower()
         if "intrinsic" in label:
@@ -266,36 +308,52 @@ class HallucinationPipeline:
             return "extrinsic"
         return "no"
 
-    def extract_signals(self, context, prompt, response) -> Dict[str, Any]:
+    def extract_signals_batch(self, items) -> List[Dict[str, Any]]:
         """
-        Everything except the LightGBM vote: the 778 features plus the NLI / NER / LLM signals the
-        guardrails use. The in-process engine and the KServe transformer both call this, so serving
-        paths cannot diverge.
+        Everything except the LightGBM vote, for many (context, prompt, response) triples at once: the
+        778 features plus the NLI / NER / LLM signals the guardrails use. Each model runs once per batch
+        instead of once per triple, which is what the RAG evaluator's claim x chunk grid needs.
         """
         if not self._is_loaded:
             self._load_models()
 
-        c, p, r = str(context).strip(), str(prompt).strip(), str(response).strip()
-        f_embed = self._extract_embeddings([vf.embedding_text(c, p, r)])
+        items = [(str(c).strip(), str(p).strip(), str(r).strip()) for c, p, r in items]
+        if not items:
+            return []
+        contexts, prompts, responses = (list(col) for col in zip(*items))
+        started = time.perf_counter()
 
+        f_embed = self._extract_embeddings([vf.embedding_text(c, p, r) for c, p, r in items])
         # NLI / NER are not LightGBM features; they drive the guardrails and the breakdown
-        p_entail, p_neutral, p_contra = self._get_nli_features(c, r)
-        logger.info(f"- [NLI] contra {p_contra:.4f} | neutral {p_neutral:.4f} | entail {p_entail:.4f}")
-        f_ner = self._get_ner_features(c, r)
-        logger.info(f"- [NER] new entities {f_ner[0][0]} | overlap {f_ner[0][1]:.2f}")
-        f_vistral = self._get_vistral_probs(c, p, r)  # [ext, int, no]
-        logger.info(f"- [LLM] ext {f_vistral[0][0]:.4f} | int {f_vistral[0][1]:.4f} | no {f_vistral[0][2]:.4f}")
+        nli = self._nli_probs(list(zip(contexts, responses)))       # [entail, neutral, contra]
+        ner = self._ner_features(contexts, responses)               # [new entities, overlap]
+        llm = self._vistral_probs(items)                            # [ext, int, no]
+        # training column order for the LLM probabilities is [no, ext, int]
+        features = self._build_model_features(f_embed, contexts, prompts, responses, llm[:, [2, 0, 1]])
 
-        return {
-            # training column order for the LLM probabilities is [no, ext, int]
-            "features": self._build_model_features(f_embed, c, p, r, f_vistral[:, [2, 0, 1]]),
-            "p_entailment": float(p_entail),
-            "p_neutral": float(p_neutral),
-            "p_contradiction": float(p_contra),
-            "new_entity_count": int(f_ner[0][0]),
-            "entity_overlap_ratio": float(f_ner[0][1]),
-            "vistral_extrinsic_prob": float(f_vistral[0][0]),
-        }
+        signals = []
+        for i in range(len(items)):
+            logger.debug(f"- [NLI] contra {nli[i, 2]:.4f} | neutral {nli[i, 1]:.4f} | entail {nli[i, 0]:.4f} "
+                         f"| [NER] new {int(ner[i, 0])} overlap {ner[i, 1]:.2f} "
+                         f"| [LLM] ext {llm[i, 0]:.4f} int {llm[i, 1]:.4f} no {llm[i, 2]:.4f}")
+            signals.append({
+                "features": features[i:i + 1],
+                "p_entailment": float(nli[i, 0]),
+                "p_neutral": float(nli[i, 1]),
+                "p_contradiction": float(nli[i, 2]),
+                "new_entity_count": int(ner[i, 0]),
+                "entity_overlap_ratio": float(ner[i, 1]),
+                "vistral_extrinsic_prob": float(llm[i, 0]),
+            })
+        logger.info(f"signals for {len(items)} triple(s) in {time.perf_counter() - started:.2f}s (batch size {self.batch_size})")
+        return signals
+
+    def extract_signals(self, context, prompt, response) -> Dict[str, Any]:
+        """
+        One triple. The in-process engine and the KServe transformer both call this (through the
+        batch path), so serving paths cannot diverge.
+        """
+        return self.extract_signals_batch([(context, prompt, response)])[0]
 
     def decide(self, probs, signals: Dict[str, Any]) -> Dict[str, Union[str, float, None]]:
         """LightGBM class probabilities [ext, no, int] + signals -> final verdict (guardrail v3)."""
@@ -334,11 +392,19 @@ class HallucinationPipeline:
             "active_guardrail": active_guardrail,
         }
 
-    def predict(self, context, prompt, response) -> Dict[str, Union[str, float]]:
+    def predict_batch(self, items) -> List[Dict[str, Union[str, float]]]:
+        """Verdicts for many (context, prompt, response) triples; one LightGBM call for all of them."""
+        items = list(items)
         if self.disabled:
-            return {"label": "no", "confidence": 1.0}
-        signals = self.extract_signals(context, prompt, response)
-        return self.decide(self._predict_ensemble(signals["features"])[0], signals)
+            return [{"label": "no", "confidence": 1.0} for _ in items]
+        signals = self.extract_signals_batch(items)
+        if not signals:
+            return []
+        probs = self._predict_ensemble(np.vstack([s["features"] for s in signals]))
+        return [self.decide(p, s) for p, s in zip(probs, signals)]
+
+    def predict(self, context, prompt, response) -> Dict[str, Union[str, float]]:
+        return self.predict_batch([(context, prompt, response)])[0]
 
 _pipeline_instance = None
 

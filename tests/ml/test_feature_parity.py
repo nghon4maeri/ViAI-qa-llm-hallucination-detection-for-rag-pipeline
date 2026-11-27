@@ -98,6 +98,6 @@ def test_serving_features_match_training(train, pipeline):
         c, p, r = contexts[i], prompts[i], responses[i]
         # Training embedded the raw (unstripped) concatenation
         f_embed = pipeline._extract_embeddings([f"{c} {p} {r}"])
-        x = pipeline._build_model_features(f_embed, c, p, r, vistral[i : i + 1])
+        x = pipeline._build_model_features(f_embed, [c], [p], [r], vistral[i : i + 1])
         assert x.shape == (1, pipeline.feature_dim)
         np.testing.assert_allclose(x[0], X[i], rtol=1e-3, atol=1e-3)
