@@ -78,3 +78,7 @@ graphify-out/
 .graphifyignore
 .claude/
 CLAUDE.md
+
+# Jupyter notebooks stay local (EDA and research); pipelines live in machine-learning/pipelines
+*.ipynb
+.ipynb_checkpoints/
