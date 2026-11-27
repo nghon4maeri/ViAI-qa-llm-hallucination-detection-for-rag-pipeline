@@ -14,13 +14,30 @@ import yaml
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
+def dvc_managed() -> list:
+    """
+    Paths DVC restores (dvc pull / dvc repro) rather than git: .dvc pointer targets and stage outputs.
+    A clean checkout (CI) does not have them yet, and that is not a broken reference.
+    """
+    paths = [f[:-len(".dvc")] for f in glob.glob("**/*.dvc", recursive=True)]
+    for stage in yaml.safe_load(open("dvc.yaml"))["stages"].values():
+        paths += [o if isinstance(o, str) else next(iter(o)) for o in stage.get("outs", [])]
+    return [p.rstrip("/") for p in paths]
+
+
 def test_referenced_paths_exist(monkeypatch):
     monkeypatch.chdir(ROOT)
     missing = []
+    managed = dvc_managed()
 
     def need(path, where):
-        if not glob.glob(path):
-            missing.append(f"{where}: {path}")
+        if glob.glob(path):
+            return
+        p = path.rstrip("/")
+        # the path is, is inside, or contains something DVC restores
+        if any(p == m or p.startswith(m + "/") or m.startswith(p + "/") for m in managed):
+            return
+        missing.append(f"{where}: {path}")
 
 
     # Dockerfiles built from the repo root (compose context .. / CI context .)

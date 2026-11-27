@@ -162,10 +162,10 @@ def data_training():
             gcs = GCS("GCS\nmodel artifacts")
             minio = icon("minio", "MinIO\nDVC remote")
 
-        engineer >> flow("1. clean") >> notebook >> flow("2. version") >> dvc
-        dvc >> flow("dvc repro") >> phobert >> flow("778 features") >> lgbm >> flow("3. log run") >> mlflow
-        mlflow >> flow("5") >> sql
-        mlflow >> flow("4, 6") >> gcs
+        engineer >> flow("clean") >> notebook >> flow("version") >> dvc
+        dvc >> flow("dvc repro") >> phobert >> flow("778 features") >> lgbm >> flow("log run") >> mlflow
+        mlflow >> flow("metadata") >> sql
+        mlflow >> flow("artifacts") >> gcs
         lgbm >> place() >> audits
         mlflow >> place() >> minio
         dvc >> flow("dvc push", side=True, style="dashed") >> minio
@@ -186,8 +186,8 @@ def serving():
         with group("Storage", STORAGE):
             gcs = GCS("GCS\nmodel")
 
-        clients >> flow("14") >> nginx >> flow("15") >> api >> flow("text") >> transformer
-        transformer >> flow("778 features") >> predictor << flow("12. mount") << gcs
+        clients >> flow("request") >> nginx >> flow("route") >> api >> flow("text") >> transformer
+        transformer >> flow("778 features") >> predictor << flow("mount") << gcs
         predictor >> flow("probabilities", side=True, style="dashed") >> transformer
         transformer >> flow("verdict", side=True, style="dashed") >> api
         api >> db
@@ -232,10 +232,10 @@ def ci_cd():
             helm = Helm("Helm")
             gke = GKE("hallucination-prod")
 
-        engineer >> flow("7. push") >> github >> flow("8") >> ci >> flow("main") >> cd
-        cd >> flow("11, 13") >> helm >> gke
+        engineer >> flow("push") >> github >> flow("trigger") >> ci >> flow("main") >> cd
+        cd >> flow("deploy") >> helm >> gke
         cd << flow("model") << mlflow
-        ci >> flow("9. image") >> registry >> flow("10. pull", style="dashed") >> gke
+        ci >> flow("image") >> registry >> flow("pull", style="dashed") >> gke
         github >> flow("web", style="dashed") >> vercel
 
 
@@ -253,8 +253,8 @@ def provisioning():
         with group("Local Environment", LOCAL):
             minikube = K8S("minikube\n(local test)")
 
-        engineer >> flow("1. provision") >> terraform >> flow("2. bootstrap") >> ansible
-        ansible >> flow("3. release") >> helm >> flow("backend,\nInferenceService") >> gke
+        engineer >> flow("provision") >> terraform >> flow("bootstrap") >> ansible
+        ansible >> flow("release") >> helm >> flow("backend,\nInferenceService") >> gke
         helm >> place() >> sql
         helm >> flow("same chart", style="dashed") >> minikube
         terraform >> flow("creates GKE + Cloud SQL", side=True, style="dashed", lhead="cluster_GCP") >> sql
@@ -277,7 +277,7 @@ def observability():
 
         clients >> nginx >> api
         api >> flow("metrics") >> prom
-        api >> flow("16. traces") >> jaeger
+        api >> flow("traces") >> jaeger
         api >> flow("logs", side=True) >> loki
         api >> flow("audits", side=True) >> drift
         # 2 x 2 grid instead of one tall column: logs and drift sit one column to the right
