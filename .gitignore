@@ -79,6 +79,7 @@ graphify-out/
 .claude/
 CLAUDE.md
 
-# Jupyter notebooks stay local (EDA and research); pipelines live in machine-learning/pipelines
-*.ipynb
+# The two research notebooks stay local only; docs/notebooks/ holds the tracked walkthrough
+machine-learning/notebooks/eda-vihallu.ipynb
+machine-learning/notebooks/train-model-vihallu.ipynb
 .ipynb_checkpoints/
