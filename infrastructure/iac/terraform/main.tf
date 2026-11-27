@@ -8,7 +8,7 @@ terraform {
   }
 }
 
-# Local cluster only (infrastructure/k8s/local/deploy-minikube.sh creates the viai-qa profile).
+# Local cluster only (`deployctl up`, infrastructure/k8s/deployctl, creates the viai-qa profile).
 # Pass -var kube_context=... for another local cluster; GKE is provisioned from ./gke.
 variable "kube_context" {
   type    = string

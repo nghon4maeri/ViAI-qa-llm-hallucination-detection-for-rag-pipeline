@@ -34,3 +34,12 @@ class EmbeddingEngine(Protocol):
     def embed(self, texts: List[str]) -> "np.ndarray":
         """Return one L2-normalised vector per text."""
         ...
+
+
+@runtime_checkable
+class BatchEvaluationEngine(Protocol):
+    """Optional capability: engines that score many inputs at once (each model runs once per batch)."""
+
+    def evaluate_batch(self, payloads: List[EvaluationInput]) -> List[EvaluationResult]:
+        """One result per payload, in order."""
+        ...

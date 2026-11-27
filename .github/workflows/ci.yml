@@ -44,6 +44,11 @@ jobs:
       - name: Install CI dependencies
         run: pip install -r requirements/ci.txt
 
+      # Rust TF-IDF index (docs/GO_RUST_MIGRATION_PLAN.md R1); the runner image ships cargo, and the
+      # parity tests in tests/demo compare it with scikit-learn
+      - name: Build the Rust extension (viai_text)
+        run: pip install ./machine-learning/viai_text
+
       # No model weights in CI: DISABLE_MODEL uses the mock engine; ML-stack tests skip themselves
       - name: Run unit & integration tests with coverage
         env:
@@ -125,10 +130,36 @@ jobs:
           python -c "import viai_qa, viai_qa.mcp_server; print('viai_qa', viai_qa.ViaiQA)"
           command -v viai-qa-mcp
 
+  deployctl:
+    name: deployctl (Go k8s orchestration)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/k8s/deployctl
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: infrastructure/k8s/deployctl/go.mod
+          cache: false   # standard library only, nothing to cache
+
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: Vet and test
+        run: |
+          go vet ./...
+          go test -count=1 -cover ./...
+
+      - name: Build
+        run: go build -o deployctl . && ./deployctl --help 2>&1 | head -3
+
   build:
     name: Build & Push Image
     runs-on: ubuntu-latest
-    needs: [test, web, packages]
+    needs: [test, web, packages, deployctl]
     if: github.event_name == 'push'
     permissions:
       contents: read

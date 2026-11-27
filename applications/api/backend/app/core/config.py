@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     )
     DB_ECHO: bool = os.getenv("DB_ECHO", "false").lower() == "true"
 
+    # Detector batch size: the RAG evaluator scores every claim x chunk pair in batches of this many
+    # (each model runs once per batch). Larger is faster per pair but holds more activations in RAM.
+    EVAL_BATCH_SIZE: int = int(os.getenv("EVAL_BATCH_SIZE", "8"))
+
     # Default Project
     DEFAULT_PROJECT_NAME: str = "Default Workspace"
     DEFAULT_PROJECT_SLUG: str = "default-workspace"
@@ -87,3 +91,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# SQLAlchemy 2.1 maps a bare postgresql:// to psycopg (v3); the images install psycopg2-binary, so name it
+if settings.DATABASE_URL.startswith("postgresql://"):
+    settings.DATABASE_URL = "postgresql+psycopg2://" + settings.DATABASE_URL[len("postgresql://"):]

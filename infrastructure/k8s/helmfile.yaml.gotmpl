@@ -10,7 +10,7 @@
 #   helmfile -e local sync -l tier=infra         — infrastructure only (also tier=app, tier=observability)
 #   helmfile -e local destroy                    — remove everything
 # KServe and cert-manager are cluster add-ons, installed first by Ansible (setup_*_stack.yaml) or
-# by local/deploy-minikube.sh.
+# by `deployctl addons` (infrastructure/k8s/deployctl).
 
 repositories:
   - name: prometheus-community
@@ -30,7 +30,8 @@ environments:
       - values/platform-prod.yaml
       - values/backend-prod.yaml
       - values/model-prod.yaml
-  local: {}
+  local:
+    kubeContext: viai-qa    # the minikube profile deployctl creates; never a cloud cluster
 
 ---
 # helmfile v1: environments and releases live in separate YAML parts
@@ -169,6 +170,19 @@ releases:
     values:
       - ../observability/grafana/values.yaml
       - values/grafana-{{ $env }}.yaml
+    # the values mount configmap grafana-dashboards-cm (the dashboards JSON); Ansible creates it with the
+    # same command, and without it the pod never leaves ContainerCreating
+    hooks:
+      - events: ["presync"]
+        showlogs: true
+        command: sh
+        args:
+          - -c
+          - >-
+            kubectl {{ with .Environment.KubeContext }}--context {{ . }} {{ end }}-n monitoring
+            create configmap grafana-dashboards-cm --from-file=../observability/grafana/provisioning/dashboards/
+            --dry-run=client -o yaml |
+            kubectl {{ with .Environment.KubeContext }}--context {{ . }} {{ end }}apply -f -
     needs:
       - monitoring/monitoring-stack
       - monitoring/loki-stack

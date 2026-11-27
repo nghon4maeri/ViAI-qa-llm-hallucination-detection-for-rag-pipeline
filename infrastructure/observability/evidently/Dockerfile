@@ -1,7 +1,11 @@
 FROM python:3.10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_DEFAULT_TIMEOUT=120 \
+    PIP_RETRIES=10
+# evidently pulls a large tree (scipy, statsmodels, plotly, scikit-learn, OpenTelemetry); pip's 15 s
+# read timeout failed the build on a slow link (ReadTimeoutError from files.pythonhosted.org)
 
 WORKDIR /app
 

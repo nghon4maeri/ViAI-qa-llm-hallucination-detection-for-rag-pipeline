@@ -195,7 +195,7 @@ docker compose -f infrastructure/docker-compose.yml up -d nginx-gateway
 
 <p align="center"><img src="docs/images/architecture/infrastructure-pipeline.png" alt="Infrastructure pipeline" width="100%"></p>
 
-Terraform creates the network, GKE cluster, Cloud SQL and secrets. Ansible installs cert-manager, KServe, MLflow and monitoring into the cluster. The Helm releases (by hand or from Jenkins) deploy the backend, the InferenceService, the gateway and the drift service. `deploy-minikube.sh` runs the same chart locally without cloud cost.
+Terraform creates the network, GKE cluster, Cloud SQL and secrets. Ansible installs cert-manager, KServe, MLflow and monitoring into the cluster. The Helm releases (by hand or from Jenkins) deploy the backend, the InferenceService, the gateway and the drift service. `deployctl` (Go, `infrastructure/k8s/deployctl`) runs the same helmfile locally without cloud cost.
 
 **Configure GCP credentials:**
 ```bash
@@ -224,11 +224,16 @@ gcloud container clusters get-credentials vihallu-cluster \
 
 **Local deploy test (minikube, no cloud cost):**
 ```bash
-infrastructure/k8s/local/deploy-minikube.sh     # profile viai-qa; kubectl's default context is not changed
-k9s --context viai-qa -n hallucination-prod     # browse pods, InferenceService, logs
-kubectl --context viai-qa -n hallucination-prod port-forward svc/hallucination-detector-predictor 18085:80
+make deploy-local        # deployctl all: cluster, cert-manager + KServe, images, pre-pull, model PVC, helmfile -e local sync
+make deploy-status       # nodes, pods, InferenceService
+k9s --context viai-qa    # browse nodes, pods, logs
 ```
-Same chart, runtime and namespace as GKE (`values/model-local.yaml`): KServe 0.16 in Standard mode, the predictor built from `infrastructure/docker/Dockerfile.predictor`, and the model on a PVC instead of S3/GCS. The transformer is off locally, because it needs torch and the NLI/NER weights.
+`deployctl` (Go, `infrastructure/k8s/deployctl`) runs each step on its own too: `go run ./infrastructure/k8s/deployctl --help`. It always passes `--context viai-qa`, never changes kubectl's default context, and refuses a GKE context unless given `--allow-cloud --env prod`. The local environment deploys the same 12 helmfile releases as GKE, with `values/*-local.yaml` on top: smaller resources, locally built images (`Dockerfile.predictor`, `Dockerfile.backend-lite`) and the model on a PVC instead of S3/GCS. The KServe transformer is off locally, because it needs torch and the NLI/NER weights.
+
+**Evidence**: `make deploy-local` on minikube, viewed in `k9s --context viai-qa`. All 25 pods run on the single `viai-qa` node: the platform (backend, KServe predictor, MLflow, Postgres, nginx gateway, Evidently) in `hallucination-prod`, and Prometheus, Grafana, Loki and Jaeger in `monitoring`.
+
+<p align="center"><img src="docs/images/k8s/k9s-pods.png" alt="k9s: all pods running" width="1000"></p>
+<p align="center"><img src="docs/images/k8s/k9s-nodes.png" alt="k9s: viai-qa node ready" width="1000"></p>
 
 **Deploy KServe + Observability stack:**
 ```bash

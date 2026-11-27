@@ -78,3 +78,11 @@ graphify-out/
 .graphifyignore
 .claude/
 CLAUDE.md
+
+# The two research notebooks stay local only; docs/notebooks/ holds the tracked walkthrough
+machine-learning/notebooks/eda-vihallu.ipynb
+machine-learning/notebooks/train-model-vihallu.ipynb
+.ipynb_checkpoints/
+
+# Rust build output (machine-learning/viai_text)
+machine-learning/viai_text/target/

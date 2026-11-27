@@ -134,3 +134,34 @@ def test_guard_endpoint_policy(client, answer, action):
     assert (len(data["failing_claims"]) == 0) == (action == "pass")
     # Every guard call leaves an audit for review
     assert client.get(f"/api/v1/audits/{data['audit_id']}").status_code == 200
+
+
+def test_claim_chunk_grid_goes_to_the_engine_as_one_batch():
+    """Batching engines get the whole claim x chunk grid (answer and reference claims) in one call."""
+    from backend.app.evaluation.cache import evaluation_cache
+
+    class BatchingMock(MockEngine):
+        def __init__(self):
+            super().__init__()
+            self.batches = []
+
+        def evaluate_batch(self, payloads):
+            self.batches.append(len(payloads))
+            return [self.evaluate(p) for p in payloads]
+
+    payload = RagEvaluationInput(
+        question="Thủ đô của Việt Nam là gì?",
+        answer="Thủ đô là Hà Nội. Thủ đô là Paris. Hà Nội nằm ở miền Bắc.",
+        contexts=["Hà Nội là thủ đô của Việt Nam.", "Hà Nội nằm ở miền Bắc."],
+        ground_truth="Hà Nội là thủ đô.",
+    )
+    evaluation_cache.clear()
+    sequential = evaluate_rag(MockEngine(), payload)
+    evaluation_cache.clear()
+    engine = BatchingMock()
+    batched = evaluate_rag(engine, payload)
+
+    assert engine.batches == [(3 + 1) * 2]           # 3 answer claims + 1 reference claim, 2 chunks each
+    assert batched.model_dump() == sequential.model_dump()
+    evaluate_rag(engine, payload)
+    assert engine.batches == [8]                     # the second run is all cache hits

@@ -1,4 +1,4 @@
-.PHONY: install test test-all test-ml run migrate pipeline up down frontend graph diagrams
+.PHONY: install test test-all test-ml run migrate pipeline up down frontend graph diagrams bench deploy-local deploy-status
 
 PY ?= python
 
@@ -37,3 +37,14 @@ graph:            ## Refresh the graphify knowledge graph after code changes
 
 diagrams:         ## Redraw the README pipeline diagrams (needs Graphviz `dot`)
 	python docs/diagrams/architecture.py
+
+bench:            ## CPU timings of the Rust candidates (docs/GO_RUST_MIGRATION_PLAN.md, R0)
+	python machine-learning/benchmarks/bench_cpu_paths.py
+
+DEPLOYCTL = cd infrastructure/k8s/deployctl && go run . --python $(CURDIR)/.venv/bin/python
+
+deploy-local:     ## Local k8s deploy on minikube viai-qa (Go: infrastructure/k8s/deployctl)
+	$(DEPLOYCTL) all
+
+deploy-status:    ## Nodes, pods and InferenceService of the local cluster
+	$(DEPLOYCTL) status

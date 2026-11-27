@@ -3,7 +3,7 @@ import re
 from typing import List, Tuple
 
 from backend.app.evaluation.cache import evaluation_cache
-from backend.app.evaluation.interfaces import EmbeddingEngine, EvaluationEngine
+from backend.app.evaluation.interfaces import BatchEvaluationEngine, EmbeddingEngine, EvaluationEngine
 from backend.app.evaluation.schemas import (
     ClaimVerdict,
     EvaluationInput,
@@ -24,12 +24,27 @@ def split_claims(answer: str) -> List[str]:
     return claims[:MAX_CLAIMS] or [answer.strip()]
 
 
+def evaluate_many(engine: EvaluationEngine, triples: List[Tuple[str, str, str]]) -> List[EvaluationResult]:
+    """
+    Cached detector results for (context, prompt, response) triples, in order. Cache misses go to the
+    engine together: one evaluate_batch call when the engine batches, else one evaluate call each.
+    """
+    results = {t: evaluation_cache.get(*t) for t in dict.fromkeys(triples)}
+    missing = [t for t, r in results.items() if r is None]
+    if missing:
+        payloads = [EvaluationInput(context=c, prompt=p, response=r) for c, p, r in missing]
+        if isinstance(engine, BatchEvaluationEngine):
+            fresh = engine.evaluate_batch(payloads)
+        else:
+            fresh = [engine.evaluate(x) for x in payloads]
+        for t, r in zip(missing, fresh):
+            evaluation_cache.set(*t, r)
+            results[t] = r
+    return [results[t] for t in triples]
+
+
 def evaluate_cached(engine: EvaluationEngine, context: str, prompt: str, response: str) -> EvaluationResult:
-    result = evaluation_cache.get(context, prompt, response)
-    if result is None:
-        result = engine.evaluate(EvaluationInput(context=context, prompt=prompt, response=response))
-        evaluation_cache.set(context, prompt, response, result)
-    return result
+    return evaluate_many(engine, [(context, prompt, response)])[0]
 
 
 def _relatedness(result: EvaluationResult) -> float:
@@ -38,9 +53,8 @@ def _relatedness(result: EvaluationResult) -> float:
     return 1.0 - p_neutral if p_neutral is not None else result.confidence
 
 
-def _judge_claim(engine: EvaluationEngine, claim: str, payload: RagEvaluationInput) -> Tuple[ClaimVerdict, str]:
-    results = [evaluate_cached(engine, ctx, payload.question, claim) for ctx in payload.contexts]
-
+def _judge_claim(claim: str, results: List[EvaluationResult]) -> Tuple[ClaimVerdict, str]:
+    """The claim's verdict from its results against every chunk (one per context, in order)."""
     supported = [i for i, r in enumerate(results) if r.label == "no"]
     if supported:
         # One supporting chunk is enough for a claim to be grounded
@@ -54,14 +68,12 @@ def _judge_claim(engine: EvaluationEngine, claim: str, payload: RagEvaluationInp
     return verdict, r.model_version
 
 
-def _metrics(engine: EvaluationEngine, payload: RagEvaluationInput, claims: List[ClaimVerdict]) -> RagMetrics:
+def _metrics(engine: EvaluationEngine, payload: RagEvaluationInput, claims: List[ClaimVerdict],
+             reference: List[ClaimVerdict]) -> RagMetrics:
     used_chunks = {c.context_index for c in claims if c.label == "no"}
 
-    context_recall = None
-    if payload.ground_truth and payload.ground_truth.strip():
-        # Same detector, other direction: can the retrieved chunks back up the reference answer?
-        reference = [_judge_claim(engine, s, payload)[0] for s in split_claims(payload.ground_truth)]
-        context_recall = sum(c.label == "no" for c in reference) / len(reference)
+    # Same detector, other direction: can the retrieved chunks back up the reference answer?
+    context_recall = sum(c.label == "no" for c in reference) / len(reference) if reference else None
 
     answer_relevance = context_relevance = None
     if isinstance(engine, EmbeddingEngine):
@@ -79,8 +91,18 @@ def _metrics(engine: EvaluationEngine, payload: RagEvaluationInput, claims: List
 
 
 def evaluate_rag(engine: EvaluationEngine, payload: RagEvaluationInput) -> RagEvaluationResult:
-    """Tier 1 RAG evaluation: every answer sentence is scored against every retrieved chunk."""
-    judged = [_judge_claim(engine, c, payload) for c in split_claims(payload.answer)]
+    """
+    Tier 1 RAG evaluation: every answer sentence is scored against every retrieved chunk. The whole
+    claim x chunk grid (answer and reference claims) goes to the detector as one batch.
+    """
+    answer_claims = split_claims(payload.answer)
+    reference_claims = split_claims(payload.ground_truth) if payload.ground_truth and payload.ground_truth.strip() else []
+    all_claims = answer_claims + reference_claims
+    n = len(payload.contexts)
+    grid = evaluate_many(engine, [(ctx, payload.question, claim) for claim in all_claims for ctx in payload.contexts])
+    judged = [_judge_claim(claim, grid[i * n:(i + 1) * n]) for i, claim in enumerate(all_claims)]
+    reference = [verdict for verdict, _ in judged[len(answer_claims):]]
+    judged = judged[:len(answer_claims)]
     claims = [verdict for verdict, _ in judged]
 
     hallucinated = [c for c in claims if c.label != "no"]
@@ -96,6 +118,6 @@ def evaluate_rag(engine: EvaluationEngine, payload: RagEvaluationInput) -> RagEv
         confidence=confidence,
         faithfulness=(len(claims) - len(hallucinated)) / len(claims),
         claims=claims,
-        metrics=_metrics(engine, payload, claims),
+        metrics=_metrics(engine, payload, claims, reference),
         model_version=judged[0][1],
     )
