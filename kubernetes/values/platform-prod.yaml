@@ -1,7 +1,0 @@
-# kubernetes/values/platform-prod.yaml
-aws:
-  region: ap-southeast-1
-  secretName: aws-credentials
-
-mlflow:
-  artifactRoot: s3://mlflow-artifacts-vihallu-nam/vihallu

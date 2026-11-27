@@ -13,11 +13,11 @@ pipeline {
 
         K8S_NAMESPACE  = 'hallucination-prod'
         HELM_RELEASE   = 'hallucination-backend'
-        HELM_CHART_PATH = './kubernetes/charts/hallucination-backend'
-        HELM_VALUES    = './kubernetes/values/backend-prod.yaml'
+        HELM_CHART_PATH = './infrastructure/k8s/charts/hallucination-backend'
+        HELM_VALUES    = './infrastructure/k8s/values/backend-prod.yaml'
 
         KSERVE_ISVC    = 'hallucination-detector'
-        KSERVE_MANIFEST = './mlops/kserve/inference-service.yaml'
+        KSERVE_MANIFEST = './infrastructure/k8s/kserve/inference-service.yaml'
         GCS_BUCKET     = 'vihallu-models'
         GCS_MODEL_URI  = 'gs://vihallu-models/hallucination-detector/model'
         INGRESS_IP     = '136.110.57.217'
@@ -71,11 +71,11 @@ pipeline {
             }
             steps {
                 sh '''
-                    docker build -f docker/Dockerfile.ci \
+                    docker build -f infrastructure/docker/Dockerfile.ci \
                         -t hallucination-ci:${GIT_SHA_SHORT} .
 
                     CONTAINER_ID=$(docker create hallucination-ci:${GIT_SHA_SHORT} \
-                        pytest tests/unit tests/integration \
+                        pytest tests \
                             --cov=backend \
                             --cov-report=xml:/tmp/coverage.xml \
                             --cov-fail-under=${COVERAGE_THRESHOLD})
@@ -134,10 +134,10 @@ pipeline {
                         "TF_VAR_ghcr_username=${GHCR_USERNAME}",
                         "TF_VAR_ghcr_token=${GHCR_TOKEN}"
                     ]) {
-                        dir('iac/terraform/gke') {
+                        dir('infrastructure/iac/terraform/gke') {
                             sh 'terraform init && terraform apply -auto-approve'
                         }
-                        dir('iac/ansible') {
+                        dir('infrastructure/iac/ansible') {
                             sh '''
                                 KUBECONFIG=${KUBECONFIG} \
                                 USE_GKE_GCLOUD_AUTH_PLUGIN=True \
@@ -164,11 +164,11 @@ pipeline {
 
                             pip install --quiet --break-system-packages mlflow boto3 google-cloud-storage
 
-                            python3 scripts/pull_model_from_registry.py
+                            python3 machine-learning/scripts/pull_model_from_registry.py
 
                             # Upload to GCS instead of embedding
                             echo "[INFO] Uploading models to GCS..."
-                            gsutil -m cp -r backend/model_store/* \
+                            gsutil -m cp -r artifacts/model_store/* \
                             gs://${GCS_BUCKET}/hallucination-detector/
 
                             echo "[OK] Models ready in GCS"
@@ -193,7 +193,7 @@ pipeline {
                             -u "${GHCR_USERNAME}" --password-stdin
 
                         docker build \
-                            -f docker/Dockerfile.backend \
+                            -f infrastructure/docker/Dockerfile.backend \
                             -t ${FULL_IMAGE}:${GIT_SHA_SHORT} \
                             -t ${FULL_IMAGE}:latest \
                             --build-arg GIT_SHA=${GIT_SHA_SHORT} \

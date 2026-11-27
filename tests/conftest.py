@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "applications", "api"))
 
 # Enforce clean in-memory database and test environment for pytest runs
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
@@ -12,9 +13,10 @@ os.environ["DISABLE_MODEL"] = "true"
 os.environ["ENABLE_TRACING"] = "false"
 os.environ["ENVIRONMENT"] = "test"
 
-# Gracefully mock optional ML or telemetry libraries if not installed in current test runner
+# Stand in for optional telemetry libraries the CI image may lack. ML libraries (torch, transformers,
+# lightgbm) are imported lazily by the code, so they are not mocked: a fake torch in sys.modules breaks
+# scikit-learn's array checks and turns importorskip("torch") into a silent pass.
 for mod in [
-    "torch", "torch.nn", "torch.nn.functional", "transformers", "lightgbm",
     "loguru", "prometheus_fastapi_instrumentator",
     "opentelemetry", "opentelemetry.trace", "opentelemetry.sdk",
     "opentelemetry.sdk.resources", "opentelemetry.sdk.trace",
@@ -39,6 +41,8 @@ from backend.app.evaluation.interfaces import EvaluationEngine
 from backend.app.evaluation.schemas import EvaluationInput
 from backend.app.evaluation.adapters.mock_engine import MockEngine
 from backend.app.modules.audits.router import get_engine
+from backend.app.modules.batches.router import get_batch_service
+from backend.app.modules.batches.service import BatchService
 from backend.main import app
 
 # Shared test in-memory SQLite engine
@@ -79,6 +83,10 @@ def test_mock_engine():
 def client(db_session, test_mock_engine):
     app.dependency_overrides[get_db] = lambda: db_session
     app.dependency_overrides[get_engine] = lambda: test_mock_engine
+    # The batch worker opens its own session in production; in tests it must share the test connection
+    app.dependency_overrides[get_batch_service] = lambda: BatchService(
+        db_session, test_mock_engine, session_factory=lambda: TestingSessionLocal(bind=db_session.bind)
+    )
 
     # Backward compatibility mock for legacy /api/predict router
     mock_legacy_pipeline = MagicMock()

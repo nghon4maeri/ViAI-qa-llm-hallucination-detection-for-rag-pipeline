@@ -1,0 +1,84 @@
+# infrastructure/k8s/charts/hallucination-model/templates/inferenceservice.yaml
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: {{ .Values.model.name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    autoscaling.knative.dev/minScale: {{ .Values.model.minReplicas | quote }}
+    autoscaling.knative.dev/maxScale: {{ .Values.model.maxReplicas | quote }}
+    autoscaling.knative.dev/target: {{ .Values.model.scaleTarget | quote }}
+    autoscaling.knative.dev/scaleToZeroGracePeriod: {{ .Values.model.scaleToZeroGracePeriod | quote }}
+spec:
+  {{- if .Values.transformer.enabled }}
+  # text -> 778 features -> predictor -> guardrails (backend/app/inference/kserve_transformer.py)
+  transformer:
+    imagePullSecrets:
+      - name: ghcr-secret
+    containers:
+      - name: kserve-container
+        image: {{ .Values.transformer.image }}
+        command: ["python", "-m", "backend.app.inference.kserve_transformer"]
+        # KServe appends --model_name and --predictor_host
+        args: ["--predictor_protocol", "v2", "--http_port", "8080"]
+        env:
+          - name: HF_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: hf-token
+                key: HF_TOKEN
+                optional: true
+        resources:
+          requests:
+            cpu: "1"
+            memory: "{{ .Values.transformer.memoryRequest }}"
+          limits:
+            cpu: "2"
+            memory: "{{ .Values.transformer.memoryLimit }}"
+        readinessProbe:
+          httpGet:
+            path: /v2/health/ready
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 30
+  {{- end }}
+  predictor:
+    model:
+      modelFormat:
+        name: mlflow
+        version: "1"
+      runtime: {{ .Values.model.runtime }}
+      storageUri: {{ .Values.model.storageUri | quote }}
+      resources:
+        {{- toYaml .Values.model.resources | nindent 8 }}
+      env:
+        - name: MLFLOW_TRACKING_URI
+          valueFrom:
+            secretKeyRef:
+              name: mlflow-secret
+              key: MLFLOW_TRACKING_URI
+        - name: MLFLOW_S3_ENDPOINT_URL
+          valueFrom:
+            secretKeyRef:
+              name: mlflow-secret
+              key: MLFLOW_S3_ENDPOINT_URL
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: AWS_SECRET_ACCESS_KEY
+        - name: MLFLOW_S3_IGNORE_TLS
+          value: "true"
+      readinessProbe:
+        httpGet:
+          path: /v2/health/ready
+          port: 8080
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        failureThreshold: 10

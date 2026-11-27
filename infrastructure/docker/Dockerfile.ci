@@ -1,0 +1,31 @@
+FROM python:3.10-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DISABLE_MODEL=true
+ENV PYTHONPATH=/app/applications/api:/app/machine-learning:/app
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir --upgrade pip
+
+COPY requirements/ci.txt requirements-ci.txt
+RUN pip install --no-cache-dir -r requirements-ci.txt
+
+# Same layout as the repo: the API, the ML pipelines and the SDK are all under test
+COPY applications/api applications/api
+COPY machine-learning machine-learning
+COPY client-sdk client-sdk
+COPY tests tests
+COPY .coveragerc .
+COPY pyproject.toml .
+
+RUN mkdir -p /workspace && chmod 777 /workspace
+
+CMD ["pytest", "tests", \
+     "--cov=backend", \
+     "--cov-config=.coveragerc", \
+     "--cov-report=xml:/workspace/coverage.xml", \
+     "--cov-report=term-missing"]

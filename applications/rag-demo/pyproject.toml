@@ -1,0 +1,24 @@
+[project]
+name = "viai-rag-demo"
+version = "0.1.0"
+description = "Vietnamese medical RAG chatbot guarded by ViAI-QA (demo for the evaluation platform)"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=2.14",
+    "fastapi>=0.111",
+    "pandas>=2.0,<3",
+    "pyarrow>=14",
+    "scikit-learn>=1.4",
+    "sqlalchemy>=2.0",
+    # viai-qa SDK: pip install ./client-sdk/python
+]
+
+[project.scripts]
+viai-rag-demo = "rag_demo.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["rag_demo"]

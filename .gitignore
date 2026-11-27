@@ -9,7 +9,9 @@ env/
 .env
 .vscode/
 
-models/
+/artifacts/models/*
+!/artifacts/models/.gitignore
+!/artifacts/models/*.dvc
 result/
 predictions/
 
@@ -45,15 +47,34 @@ terraform.tfvars
 .DS_Store
 .vercel/
 .vercel
-frontend/.vercel
+applications/web/.vercel
 .svelte-kit-old
 
-config-for-jenkins/**/secrets*
-config-for-jenkins/**/credentials*
+infrastructure/ci/**/secrets*
+infrastructure/ci/**/credentials*
+infrastructure/ci/kubeconfig*
+# Local secrets (TLS, basic-auth, kubeconfig copies); never committed
+infrastructure/secrets/
 config_flat
 auth-file.venv_mlflow/
-models/
-backend/model_store/
+/artifacts/models/*
+!/artifacts/models/.gitignore
+!/artifacts/models/*.dvc
+artifacts/model_store/
+applications/api/backend/model_store/
+# Local MLflow store, competition results, scratch
+artifacts/local/
 *.pth
 *.pkl
 docs/.svelte-kit-old
+
+# Python package builds (pip install ./machine-learning, ./client-sdk/python)
+*.egg-info/
+machine-learning/build/
+client-sdk/python/build/
+
+# local AI tooling: graphify knowledge graph (rebuilt by `graphify update .`), Claude Code skills and instructions
+graphify-out/
+.graphifyignore
+.claude/
+CLAUDE.md

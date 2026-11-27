@@ -1,40 +1,66 @@
 # dvc.yaml
 stages:
-  embed:
-    cmd: python notebooks/embed_phobert.py
+  build_medical:
+    cmd: python machine-learning/pipelines/build_medical_hallu.py
+    params:
+      - machine-learning/params.yaml:
+          - medical
     deps:
-      - notebooks/embed_phobert.py
-      - data/vihallu-dataset/vihallu-train.csv
+      - machine-learning/pipelines/build_medical_hallu.py
+      - data/raw/vimedaqa
     outs:
-      - features/phobert_embeddings.npy
+      - data/processed/vimedhallu
+
+  embed:
+    cmd: python machine-learning/pipelines/embed.py
+    params:
+      - machine-learning/params.yaml:
+          - embed
+    deps:
+      - machine-learning/pipelines/embed.py
+      - data/raw/vihallu/vihallu-train.csv
+    outs:
+      - artifacts/features/phobert_embeddings.npy
 
   train:
-    cmd: python notebooks/train-model-vihallu.py
+    cmd: python machine-learning/pipelines/train.py
+    params:
+      - machine-learning/params.yaml:
+          - train
     deps:
-      - notebooks/train-model-vihallu.py
-      - features/phobert_embeddings.npy
-      - data/vihallu-dataset/vihallu-train.csv
-      - data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv
+      - machine-learning/pipelines/train.py
+      - artifacts/features/phobert_embeddings.npy
+      - data/raw/vihallu/vihallu-train.csv
+      - data/raw/vihallu-vistral/vistral_train_predictions_with_probs.csv
     outs:
-      - models/lgbm
-      - models/metadata.yaml
-      - models/feature_schema.json
+      - artifacts/models/lgbm
+      - artifacts/models/metadata.yaml
+      - artifacts/models/feature_schema.json
 
   infer:
-    cmd: python notebooks/infer-model-vihallu.py
+    cmd: python machine-learning/pipelines/infer.py
     deps:
-      - notebooks/infer-model-vihallu.py
-      - features/phobert_embeddings.npy
-      - data/vihallu-dataset/vihallu-train.csv
-      - data/vihallu-vistral-dataset/vistral_train_predictions_with_probs.csv
-      - models/lgbm
-      - models/feature_schema.json
+      - machine-learning/pipelines/infer.py
+      - artifacts/features/phobert_embeddings.npy
+      - data/raw/vihallu/vihallu-train.csv
+      - data/raw/vihallu-vistral/vistral_train_predictions_with_probs.csv
+      - artifacts/models/lgbm
+      - artifacts/models/feature_schema.json
     outs:
-      - predictions/vihallu_infer_predictions.csv
+      - artifacts/predictions/vihallu_infer_predictions.csv
+
+  # Reviewer feedback from Postgres (needs DATABASE_URL); re-run before each retraining round
+  export_feedback:
+    cmd: python machine-learning/pipelines/export_feedback.py
+    deps:
+      - machine-learning/pipelines/export_feedback.py
+    outs:
+      - data/processed/feedback/feedback-export.csv
+    always_changed: true
 
   promote:
-    cmd: python scripts/auto_promote_registry.py
+    cmd: python machine-learning/pipelines/promote.py
     deps:
-      - scripts/auto_promote_registry.py
-      - models/metadata.yaml
+      - machine-learning/pipelines/promote.py
+      - artifacts/models/metadata.yaml
     always_changed: true

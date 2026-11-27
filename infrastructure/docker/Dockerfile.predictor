@@ -1,0 +1,17 @@
+# Slim MLServer predictor for the hallucination-detector InferenceService.
+# Same runtime as the ClusterServingRuntime (mlserver_mlflow.MLflowRuntime), but pinned to the mlflow and
+# lightgbm versions machine-learning/pipelines/train.py logs with: an MLflow pyfunc pickle must be loaded
+# by the mlflow that wrote it, and seldonio/mlserver bundles its own (and every other runtime, several GB).
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 MLSERVER_MODELS_DIR=/mnt/models
+
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir "mlserver==1.7.1" "mlserver-mlflow==1.7.1" "mlflow==3.10.0" "lightgbm==4.7.0" "pandas<3"
+# uvloop >= 0.22 raises from asyncio.get_event_loop() without a running loop, which crashes MLServer 1.7.1's
+# parallel inference workers at startup ("There is no current event loop in thread 'MainThread'")
+RUN pip install --no-cache-dir "uvloop<0.22"
+
+# the model comes from MLSERVER_MODEL_URI / MLSERVER_MODEL_IMPLEMENTATION, set by the serving runtime
+EXPOSE 8080 8081
+CMD ["sh", "-c", "mlserver start ${MLSERVER_MODELS_DIR}"]

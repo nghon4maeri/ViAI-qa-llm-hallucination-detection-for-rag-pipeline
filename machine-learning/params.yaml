@@ -1,0 +1,27 @@
+# machine-learning/params.yaml
+# Tunable pipeline settings. DVC tracks them (dvc.yaml `params:`), so changing a value marks the
+# stages that use it as stale, and train.py logs them to MLflow so runs stay comparable.
+# Runtime API settings (judge model, escalation threshold) live in the API's Settings, not here.
+
+embed:
+  model: vinai/phobert-base   # PHOBERT_MODEL env var still overrides, e.g. with a local copy
+  batch_size: 8
+
+train:
+  num_folds: 5
+  random_state: 42
+  lgbm:
+    objective: multiclass
+    num_class: 3
+    num_leaves: 64
+    learning_rate: 0.05
+    n_estimators: 300
+    n_jobs: 2
+
+medical:
+  seed: 42
+
+generate_hard:
+  model: claude-haiku-5-5     # cheapest current model; GENERATOR_MODEL env var overrides
+  effort: low
+  n: 600

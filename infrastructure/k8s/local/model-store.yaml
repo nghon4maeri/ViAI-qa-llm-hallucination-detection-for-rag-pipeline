@@ -1,0 +1,33 @@
+# infrastructure/k8s/local/model-store.yaml
+# Local stand-in for the S3/GCS model bucket: KServe mounts pvc://hallucination-model-store/model.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hallucination-model-store
+  namespace: hallucination-prod
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+# Holds the PVC so `kubectl cp` can fill it; deleted after the copy.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: model-store-loader
+  namespace: hallucination-prod
+spec:
+  restartPolicy: Never
+  containers:
+    - name: loader
+      image: alpine:3.20
+      imagePullPolicy: IfNotPresent
+      command: ["sleep", "3600"]
+      volumeMounts:
+        - name: store
+          mountPath: /store
+  volumes:
+    - name: store
+      persistentVolumeClaim:
+        claimName: hallucination-model-store

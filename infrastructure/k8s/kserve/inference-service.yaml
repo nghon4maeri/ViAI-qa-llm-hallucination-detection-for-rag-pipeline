@@ -1,0 +1,81 @@
+# infrastructure/k8s/kserve/inference-service.yaml
+
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: hallucination-detector
+  namespace: hallucination-prod
+spec:
+  # text -> 778 features -> predictor -> guardrails (backend/app/inference/kserve_transformer.py)
+  transformer:
+    imagePullSecrets:
+      - name: ghcr-secret
+    containers:
+      - name: kserve-container
+        image: ghcr.io/nhnammldlnlpcvrs/hallucination-backend:latest
+        command: ["python", "-m", "backend.app.inference.kserve_transformer"]
+        # KServe appends --model_name and --predictor_host
+        args: ["--predictor_protocol", "v2", "--http_port", "8080"]
+        env:
+          - name: HF_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: hf-token
+                key: HF_TOKEN
+                optional: true
+        resources:
+          requests:
+            cpu: "1"
+            memory: "4Gi"
+          limits:
+            cpu: "2"
+            memory: "6Gi"
+        readinessProbe:
+          httpGet:
+            path: /v2/health/ready
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 30
+  predictor:
+    model:
+      modelFormat:
+        name: mlflow
+        version: "1"
+      runtime: mlflow-runtime
+      storageUri: "gs://vihallu-models/hallucination-detector/model"
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "2Gi"
+        limits:
+          cpu: "2"
+          memory: "4Gi"
+      env:
+        - name: MLFLOW_TRACKING_URI
+          valueFrom:
+            secretKeyRef:
+              name: mlflow-secret
+              key: MLFLOW_TRACKING_URI
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/secrets/google/key.json
+      volumeMounts:
+        - name: gcs-key
+          mountPath: /var/secrets/google
+      readinessProbe:
+        httpGet:
+          path: /v2/health/ready
+          port: 8080
+        initialDelaySeconds: 30
+        periodSeconds: 10
+      livenessProbe:
+        httpGet:
+          path: /v2/health/live
+          port: 8080
+        initialDelaySeconds: 60
+        periodSeconds: 30
+  
+  volumes:
+    - name: gcs-key
+      secret:
+        secretName: gcs-credentials

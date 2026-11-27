@@ -1,0 +1,31 @@
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY applications/web/package*.json ./
+RUN npm install
+
+COPY applications/web/ .
+
+ARG VITE_API_URL=http://localhost
+ENV VITE_API_URL=$VITE_API_URL
+# Empty by default: production bundles carry no API key
+ARG VITE_API_KEY=
+ENV VITE_API_KEY=$VITE_API_KEY
+
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOST=0.0.0.0
+
+COPY applications/web/package*.json ./
+RUN npm install --omit=dev
+
+COPY --from=builder /app/build ./build
+
+EXPOSE 3000
+
+CMD ["node", "build/index.js"]
