@@ -87,3 +87,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# SQLAlchemy 2.1 maps a bare postgresql:// to psycopg (v3); the images install psycopg2-binary, so name it
+if settings.DATABASE_URL.startswith("postgresql://"):
+    settings.DATABASE_URL = "postgresql+psycopg2://" + settings.DATABASE_URL[len("postgresql://"):]
